@@ -2083,6 +2083,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       }
     }
     if (!userMsg) throw new Error('No user message found');
+    if (isTemporaryMessageId(userMsg.id)) {
+      throw new Error('消息仍在保存，请稍后再试');
+    }
 
     // Create placeholder for new version, preserving original created_at for position
     const tempAssistantId = `temp-assistant-${Date.now()}`;
@@ -2204,6 +2207,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     if (!aiMsg?.parent_message_id) throw new Error('Cannot find parent user message');
     const userMsg = msgs.find(m => m.id === aiMsg.parent_message_id);
     if (!userMsg) throw new Error('User message not found');
+    if (isTemporaryMessageId(userMsg.id)) {
+      throw new Error('消息仍在保存，请稍后再试');
+    }
 
     const parentId = userMsg.id;
     const originalAiMsg = msgs.find(m => m.parent_message_id === parentId && m.is_active);

@@ -96,6 +96,23 @@ struct EffectiveChatModelParams {
     max_tokens: Option<u32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct StreamTimeoutConfig {
+    first_packet: Option<Duration>,
+    idle: Option<Duration>,
+}
+
+fn stream_timeout_config_from_settings(settings: &AppSettings) -> StreamTimeoutConfig {
+    StreamTimeoutConfig {
+        first_packet: duration_from_timeout_secs(settings.chat_stream_first_packet_timeout_secs),
+        idle: duration_from_timeout_secs(settings.chat_stream_idle_timeout_secs),
+    }
+}
+
+fn duration_from_timeout_secs(seconds: u64) -> Option<Duration> {
+    (seconds > 0).then(|| Duration::from_secs(seconds))
+}
+
 fn resolve_chat_model_params(
     conversation: &Conversation,
     model_param_overrides: Option<&ModelParamOverrides>,
@@ -775,6 +792,7 @@ async fn consume_stream(
     provider_id: &str,
     cancel_flag: &AtomicBool,
     suppress_thinking: bool,
+    stream_timeouts: StreamTimeoutConfig,
 ) -> (
     String, // full_content (includes <think> blocks)
     Option<TokenUsage>,
@@ -798,7 +816,47 @@ async fn consume_stream(
     let mut thinking_durations: Vec<u64> = Vec::new();
     let mut disabled_thinking_strip_state = DisabledThinkingStripState::default();
 
-    while let Some(result) = stream.next().await {
+    let mut received_stream_packet = false;
+    loop {
+        let current_timeout = if received_stream_packet {
+            stream_timeouts.idle
+        } else {
+            stream_timeouts.first_packet
+        };
+        let next_result = match current_timeout {
+            Some(timeout) => match tokio::time::timeout(timeout, stream.next()).await {
+                Ok(result) => result,
+                Err(_) => {
+                    let err_msg = if received_stream_packet {
+                        format!(
+                            "模型响应空闲超时，已超过 {} 秒未收到新内容",
+                            timeout.as_secs()
+                        )
+                    } else {
+                        format!("模型首包超时，已超过 {} 秒未收到响应", timeout.as_secs())
+                    };
+                    let _ = app.emit(
+                        "chat-stream-error",
+                        ChatStreamErrorEvent {
+                            conversation_id: conversation_id.to_string(),
+                            message_id: message_id.to_string(),
+                            model_id: Some(model_id.to_string()),
+                            provider_id: Some(provider_id.to_string()),
+                            error: err_msg.clone(),
+                        },
+                    );
+                    tracing::error!("[consume_stream] {}", err_msg);
+                    stream_error = Some(err_msg);
+                    break;
+                }
+            },
+            None => stream.next().await,
+        };
+        let Some(result) = next_result else {
+            break;
+        };
+        received_stream_packet = true;
+
         // Check for cancellation
         if cancel_flag.load(std::sync::atomic::Ordering::Relaxed) {
             tracing::info!("[consume_stream] Cancelled by user");
@@ -1775,6 +1833,7 @@ fn spawn_stream_task(
             &settings,
             force_max_tokens,
         );
+        let stream_timeouts = stream_timeout_config_from_settings(&settings);
         let registry = ProviderRegistry::create_default();
         let registry_key = provider_type_to_registry_key(&provider.provider_type);
         let adapter: &dyn aqbot_providers::ProviderAdapter = match registry.get(registry_key) {
@@ -1884,6 +1943,7 @@ fn spawn_stream_task(
                 &provider.id,
                 &cancel_flag,
                 suppress_thinking,
+                stream_timeouts,
             )
             .await;
 
@@ -3863,6 +3923,24 @@ mod tests {
 
         settings.title_summary_max_tokens = Some(128);
         assert_eq!(title_summary_max_tokens(&settings), 128);
+    }
+
+    #[test]
+    fn stream_timeout_config_uses_global_settings_and_zero_disables() {
+        let mut settings = AppSettings::default();
+        settings.chat_stream_first_packet_timeout_secs = 45;
+        settings.chat_stream_idle_timeout_secs = 12;
+
+        let config = stream_timeout_config_from_settings(&settings);
+        assert_eq!(config.first_packet, Some(Duration::from_secs(45)));
+        assert_eq!(config.idle, Some(Duration::from_secs(12)));
+
+        settings.chat_stream_first_packet_timeout_secs = 0;
+        settings.chat_stream_idle_timeout_secs = 0;
+
+        let config = stream_timeout_config_from_settings(&settings);
+        assert_eq!(config.first_packet, None);
+        assert_eq!(config.idle, None);
     }
 
     #[test]

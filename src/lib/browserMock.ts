@@ -397,6 +397,8 @@ const DEFAULT_SETTINGS = {
   backup_interval_hours: 24,
   content_safety_enabled: true,
   last_selected_conversation_id: null,
+  chat_stream_first_packet_timeout_secs: 180,
+  chat_stream_idle_timeout_secs: 90,
 };
 
 function svgDataUrl(label: string, color = '#f97316'): string {

@@ -1094,6 +1094,45 @@ describe('conversationStore pagination', () => {
     vi.useRealTimers();
   });
 
+  it('does not send temp user ids to regenerate_message', async () => {
+    const { useConversationStore } = await import('../conversationStore');
+    const user = {
+      ...makeMessage(1),
+      id: 'temp-user-1',
+      role: 'user' as const,
+      content: 'question still saving',
+      provider_id: null,
+      model_id: null,
+      parent_message_id: null,
+    };
+    const assistant = {
+      ...makeMessage(2),
+      id: 'temp-assistant-1',
+      content: '',
+      provider_id: 'provider-a',
+      model_id: 'model-a',
+      parent_message_id: user.id,
+      is_active: true,
+      status: 'partial' as const,
+    };
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      messages: [user, assistant],
+      enabledMcpServerIds: [],
+      enabledKnowledgeBaseIds: [],
+      enabledMemoryNamespaceIds: [],
+      thinkingBudget: null,
+    });
+
+    await expect(useConversationStore.getState().regenerateMessage(assistant.id))
+      .rejects
+      .toThrow('消息仍在保存');
+
+    expect(invokeMock).not.toHaveBeenCalledWith('regenerate_message', expect.anything());
+    expect(useConversationStore.getState().messages).toHaveLength(2);
+  });
+
   it('resolves a same-model regenerated temp placeholder to the active partial database version', async () => {
     const { useConversationStore } = await import('../conversationStore');
     const user = {

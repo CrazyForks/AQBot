@@ -16,6 +16,10 @@ vi.mock('react-i18next', () => ({
       const labels: Record<string, string> = {
         'settings.additionalFeatures': '附加功能',
         'settings.chatMinimap': '对话导航',
+        'settings.chatStreamTimeouts': '流式响应超时',
+        'settings.chatStreamTimeoutsDesc': '设置模型流式响应的首包和空闲等待时间，填 0 表示不限制。',
+        'settings.chatStreamFirstPacketTimeout': '首包超时',
+        'settings.chatStreamIdleTimeout': '空闲超时',
         'settings.documentAttachmentReading': '读取文档附件',
         'settings.documentAttachmentReadingDesc': '开启后，PDF、DOC、DOCX 附件会解析为文本并发送给模型，不会加入知识库。',
         'settings.showImageModelsInModelSelector': '模型选择器中显示绘画模型',
@@ -60,6 +64,22 @@ vi.mock('antd', () => {
         onClick={() => onChange?.(!checked)}
       />
     ),
+    InputNumber: ({
+      value,
+      onChange,
+      'aria-label': ariaLabel,
+    }: {
+      value?: number;
+      onChange?: (value: number | null) => void;
+      'aria-label'?: string;
+    }) => (
+      <input
+        aria-label={ariaLabel}
+        type="number"
+        value={value ?? ''}
+        onChange={(event) => onChange?.(event.target.value === '' ? null : Number(event.target.value))}
+      />
+    ),
     Card: ({ children }: { children?: React.ReactNode }) => <section>{children}</section>,
     Dropdown: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
     theme: {
@@ -101,6 +121,8 @@ describe('ConversationSettings', () => {
       render_user_markdown: false,
       document_attachment_reading_enabled: false,
       show_image_models_in_model_selector: false,
+      chat_stream_first_packet_timeout_secs: 180,
+      chat_stream_idle_timeout_secs: 90,
     };
   });
 
@@ -159,6 +181,22 @@ describe('ConversationSettings', () => {
 
     expect(mocks.saveSettings).toHaveBeenCalledWith({
       show_image_models_in_model_selector: false,
+    });
+  });
+
+  it('saves stream timeout settings from conversation settings', () => {
+    render(<ConversationSettings />);
+
+    expect(screen.getByText('流式响应超时')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('首包超时'), { target: { value: '45' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({
+      chat_stream_first_packet_timeout_secs: 45,
+    });
+
+    fireEvent.change(screen.getByLabelText('空闲超时'), { target: { value: '0' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({
+      chat_stream_idle_timeout_secs: 0,
     });
   });
 });

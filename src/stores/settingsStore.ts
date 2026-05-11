@@ -84,6 +84,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   default_system_prompt: null,
   chat_minimap_enabled: false,
   chat_minimap_style: 'faq',
+  chat_stream_first_packet_timeout_secs: 180,
+  chat_stream_idle_timeout_secs: 90,
   document_attachment_reading_enabled: false,
   show_image_models_in_model_selector: false,
   multi_model_display_mode: 'tabs',

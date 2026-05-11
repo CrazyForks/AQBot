@@ -700,6 +700,10 @@ pub struct AppSettings {
     /// Chat minimap / navigation overlay.
     pub chat_minimap_enabled: bool,
     pub chat_minimap_style: String,
+    /// Timeout before the first chat stream packet in seconds. 0 disables.
+    pub chat_stream_first_packet_timeout_secs: u64,
+    /// Timeout between chat stream packets in seconds. 0 disables.
+    pub chat_stream_idle_timeout_secs: u64,
     /// Parse PDF/DOC/DOCX attachments and include their text in chat prompts.
     pub document_attachment_reading_enabled: bool,
     /// Include image models in the conversation model selector.
@@ -805,6 +809,8 @@ impl Default for AppSettings {
             default_system_prompt: None,
             chat_minimap_enabled: false,
             chat_minimap_style: "faq".to_string(),
+            chat_stream_first_packet_timeout_secs: 180,
+            chat_stream_idle_timeout_secs: 90,
             document_attachment_reading_enabled: false,
             show_image_models_in_model_selector: false,
             multi_model_display_mode: "tabs".to_string(),
@@ -845,6 +851,22 @@ mod app_settings_tests {
         let settings: AppSettings =
             serde_json::from_value(json!({})).expect("settings should default missing fields");
         assert!(!settings.document_attachment_reading_enabled);
+    }
+
+    #[test]
+    fn chat_stream_timeouts_have_safe_defaults_and_roundtrip() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.chat_stream_first_packet_timeout_secs, 180);
+        assert_eq!(settings.chat_stream_idle_timeout_secs, 90);
+
+        let settings: AppSettings = serde_json::from_value(json!({
+            "chat_stream_first_packet_timeout_secs": 45,
+            "chat_stream_idle_timeout_secs": 12
+        }))
+        .expect("settings should deserialize");
+
+        assert_eq!(settings.chat_stream_first_packet_timeout_secs, 45);
+        assert_eq!(settings.chat_stream_idle_timeout_secs, 12);
     }
 }
 

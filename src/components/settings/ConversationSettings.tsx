@@ -1,10 +1,16 @@
-import { Divider, Input, Switch, theme } from 'antd';
+import { Divider, Input, InputNumber, Switch, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/stores';
 import { SettingsGroup } from './SettingsGroup';
 import { SettingsSelect } from './SettingsSelect';
 
 const { TextArea } = Input;
+
+function normalizeTimeoutSeconds(value: number | string | null) {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.max(0, Math.floor(numericValue));
+}
 
 export function ConversationSettings() {
   const { t } = useTranslation();
@@ -67,6 +73,53 @@ export function ConversationSettings() {
               { label: t('settings.multiModelDisplayModeSideBySide'), value: 'side-by-side' },
               { label: t('settings.multiModelDisplayModeStacked'), value: 'stacked' },
             ]}
+          />
+        </div>
+      </SettingsGroup>
+
+      <SettingsGroup title={t('settings.chatStreamTimeouts')}>
+        <div style={{ fontSize: 12, color: token.colorTextDescription, marginBottom: 12 }}>
+          {t('settings.chatStreamTimeoutsDesc')}
+        </div>
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <div>
+            <div>{t('settings.chatStreamFirstPacketTimeout')}</div>
+            <div style={{ fontSize: 12, color: token.colorTextDescription }}>
+              {t('settings.chatStreamFirstPacketTimeoutDesc')}
+            </div>
+          </div>
+          <InputNumber
+            aria-label={t('settings.chatStreamFirstPacketTimeout')}
+            min={0}
+            max={3600}
+            step={5}
+            value={settings.chat_stream_first_packet_timeout_secs ?? 180}
+            onChange={(value) => saveSettings({
+              chat_stream_first_packet_timeout_secs: normalizeTimeoutSeconds(value),
+            })}
+            addonAfter="s"
+            style={{ width: 120 }}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <div>
+            <div>{t('settings.chatStreamIdleTimeout')}</div>
+            <div style={{ fontSize: 12, color: token.colorTextDescription }}>
+              {t('settings.chatStreamIdleTimeoutDesc')}
+            </div>
+          </div>
+          <InputNumber
+            aria-label={t('settings.chatStreamIdleTimeout')}
+            min={0}
+            max={3600}
+            step={5}
+            value={settings.chat_stream_idle_timeout_secs ?? 90}
+            onChange={(value) => saveSettings({
+              chat_stream_idle_timeout_secs: normalizeTimeoutSeconds(value),
+            })}
+            addonAfter="s"
+            style={{ width: 120 }}
           />
         </div>
       </SettingsGroup>

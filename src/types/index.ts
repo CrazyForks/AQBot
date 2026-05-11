@@ -457,6 +457,10 @@ export interface AppSettings {
   /** Chat minimap / navigation overlay */
   chat_minimap_enabled?: boolean;
   chat_minimap_style?: 'faq' | 'sticky';
+  /** Timeout before the first chat stream packet in seconds. 0 disables. */
+  chat_stream_first_packet_timeout_secs?: number;
+  /** Timeout between chat stream packets in seconds. 0 disables. */
+  chat_stream_idle_timeout_secs?: number;
   /** Parse PDF/DOC/DOCX attachments and send extracted text to the model. Default: false */
   document_attachment_reading_enabled?: boolean;
   /** Include Image models in the conversation model selector. Default: false */
