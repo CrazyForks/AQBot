@@ -27,6 +27,7 @@ import { InputArea } from './InputArea';
 import { ModelSelector } from './ModelSelector';
 import { parseSearchContent } from '@/lib/searchUtils';
 import { CHAT_CUSTOM_HTML_TAGS, parseChatMarkdown, stripAqbotTags, type ChatMarkdownNode } from '@/lib/chatMarkdown';
+import { normalizeThinkTagsForMarkdown } from '@/lib/thinkTags';
 import {
   hasMultipleModelVersions,
   selectRenderableVersionSet,
@@ -51,9 +52,12 @@ import {
 } from './chatScroll';
 import { formatTokenCount, formatSpeed, formatDuration } from '../gateway/tokenFormat';
 import {
+  THINKING_LOADING_MARKER,
+  closeStreamingThinkBlock,
   getStreamingLoadingState,
   hasAqbotDisplayContent,
   hasModelVisibleContent,
+  isAssistantStreamingForRender,
   shouldRenderAssistantMarkdownFromContent,
   splitLeadingAqbotDisplayContent,
   stripLeadingAqbotDisplayTags,
@@ -75,7 +79,6 @@ import type { Message, Attachment, ConversationStats } from '@/types';
 
 // ── markstream-react custom thinking component ──────────────────────────
 
-const THINKING_LOADING_MARKER = '<!--aqbot-thinking-loading-->';
 const DEFAULT_LIGHT_CODE_BLOCK_THEME = 'github-light';
 const DEFAULT_DARK_CODE_BLOCK_THEME = 'poimandres';
 const DANGEROUS_D2_STYLE_PATTERNS = [
@@ -1072,11 +1075,11 @@ const AssistantMarkdown = React.memo(function AssistantMarkdown({
   const rendererKey = `${isDarkMode ? 'dark' : 'light'}:${codeBlockDarkTheme}:${codeBlockLightTheme}`;
   const contentWithoutExplicitDisplay = useMemo(() => (
     displayPrefix
-      ? stripLeadingAqbotDisplayTags(content, ['knowledge-retrieval', 'memory-retrieval'])
-      : content
+      ? stripLeadingAqbotDisplayTags(normalizeThinkTagsForMarkdown(content), ['knowledge-retrieval', 'memory-retrieval'])
+      : normalizeThinkTagsForMarkdown(content)
   ), [content, displayPrefix]);
   const displaySplit = useMemo(() => {
-    if (nodes) return { prefix: displayPrefix ?? '', body: content };
+    if (nodes) return { prefix: displayPrefix ?? '', body: normalizeThinkTagsForMarkdown(content) };
     const split = splitLeadingAqbotDisplayContent(contentWithoutExplicitDisplay);
     return {
       prefix: `${split.prefix}${displayPrefix ?? ''}`,
@@ -1088,7 +1091,7 @@ const AssistantMarkdown = React.memo(function AssistantMarkdown({
       ? parseChatMarkdown(displaySplit.prefix)
       : undefined
   ), [displaySplit.prefix]);
-  const rendererContent = displaySplit.prefix ? displaySplit.body : content;
+  const rendererContent = displaySplit.body;
 
   useEffect(() => {
     if (!hasDeferredHeavyNodes) {
@@ -2787,13 +2790,17 @@ export function ChatView() {
         ? buildAssistantDisplayContent(msg, activeMessages)
         : msg.content;
       if (shouldHideAssistantBubble(msg, aiContent)) continue;
-      // Close unclosed think block during streaming
-      if (msg.role === 'assistant' && thinkingActiveMessageIds.has(msg.id) && aiContent.includes('<think')) {
-        const lastOpen = aiContent.lastIndexOf('<think');
-        const lastClose = aiContent.lastIndexOf('</think>');
-        if (lastClose < lastOpen) {
-          aiContent += THINKING_LOADING_MARKER + '\n</think>\n\n';
-        }
+      if (msg.role === 'assistant') {
+        const isStreamingForRender = isAssistantStreamingForRender({
+          isStreaming: streaming,
+          messageId: msg.id,
+          streamingMessageId,
+          status: msg.status,
+        });
+        aiContent = closeStreamingThinkBlock(
+          aiContent,
+          thinkingActiveMessageIds.has(msg.id) || isStreamingForRender,
+        );
       }
       if (msg.role === 'assistant' && !aiContent.includes('data-aqbot="1"')) {
         const parentSearch = msg.parent_message_id
@@ -2823,7 +2830,7 @@ export function ChatView() {
 
     bubbleItemCacheRef.current = nextCache;
     return nextItems;
-  }, [activeMessages, thinkingActiveMessageIds, userSearchContentById]);
+  }, [activeMessages, streaming, streamingMessageId, thinkingActiveMessageIds, userSearchContentById]);
 
   // Append compressing placeholder when compression is in progress
   const finalBubbleItems = useMemo(() => {
@@ -2895,7 +2902,12 @@ export function ChatView() {
       // completion so the message does not switch from `content` to
       // `nodes` and visibly re-render a second time.
       const shouldRenderFromContent = shouldRenderAssistantMarkdownFromContent(
-        streaming && msg?.id === streamingMessageId,
+        isAssistantStreamingForRender({
+          isStreaming: streaming,
+          messageId: msg?.id,
+          streamingMessageId,
+          status: msg?.status,
+        }),
         Boolean(msg?.id && contentRendererMessageIdsRef.current.has(msg.id)),
       );
       if (shouldRenderFromContent) {
@@ -3111,7 +3123,12 @@ export function ChatView() {
   const aiRole = useCallback((bubbleData: BubbleItemType) => {
     // bubbleData.key is parent_message_id for stable rendering
     const msg = assistantByParentId.get(String(bubbleData.key)) ?? messageById.get(String(bubbleData.key));
-    const isStreaming = streaming && msg?.id === streamingMessageId;
+    const isStreaming = isAssistantStreamingForRender({
+      isStreaming: streaming,
+      messageId: msg?.id,
+      streamingMessageId,
+      status: msg?.status,
+    });
     const shouldRenderFromContent = shouldRenderAssistantMarkdownFromContent(
       isStreaming,
       Boolean(msg?.id && contentRendererMessageIdsRef.current.has(msg.id)),
@@ -3141,7 +3158,16 @@ export function ChatView() {
       : 'tabs';
     const isNonTabsMultiModel = hasMultiModels && effectiveDisplayMode !== 'tabs';
     const renderVersionContent = (versionMessage: Message, isVersionStreaming: boolean) => {
-      const versionContent = buildAssistantDisplayContent(versionMessage, activeMessages);
+      const versionIsStreaming = isVersionStreaming || isAssistantStreamingForRender({
+        isStreaming: streaming,
+        messageId: versionMessage.id,
+        streamingMessageId,
+        status: versionMessage.status,
+      });
+      const versionContent = closeStreamingThinkBlock(
+        buildAssistantDisplayContent(versionMessage, activeMessages),
+        versionIsStreaming,
+      );
       if (versionMessage.status === 'error') {
         return <Alert type="error" message={versionContent} showIcon />;
       }
@@ -3149,7 +3175,7 @@ export function ChatView() {
         <AssistantMarkdown
           content={versionContent}
           isDarkMode={isDarkMode}
-          isStreaming={isVersionStreaming}
+          isStreaming={versionIsStreaming}
           codeBlockDarkTheme={codeBlockDarkTheme}
           codeBlockLightTheme={codeBlockLightTheme}
           codeBlockThemes={codeBlockThemes}

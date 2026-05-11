@@ -44,6 +44,28 @@ UI -> App: 携带token访问
     });
   });
 
+  it('parses inline native think tags as a think node before answer text', () => {
+    const nodes = parseChatMarkdown('<think>好的，用户让我讲个笑话。</think>\n\nanswer');
+
+    expect(nodes[0]).toMatchObject({
+      type: 'think',
+      content: '好的，用户让我讲个笑话。',
+    });
+    expect(nodes[1]).toMatchObject({
+      type: 'paragraph',
+    });
+  });
+
+  it('does not normalize think-looking text inside fenced code blocks', () => {
+    const nodes = parseChatMarkdown('```html\n<think>literal</think>\n```');
+
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({
+      type: 'code_block',
+    });
+    expect(String(nodes[0].code)).toContain('<think>literal</think>');
+  });
+
   it('strips think and aqbot-only tags when preparing export-safe transcript text', () => {
     const cleaned = stripAqbotTags(`Final answer
 <think>Hidden reasoning</think>

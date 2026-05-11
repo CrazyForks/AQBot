@@ -3,6 +3,9 @@ import {
   getStreamingLoadingState,
   hasAqbotDisplayContent,
   hasModelVisibleContent,
+  THINKING_LOADING_MARKER,
+  closeStreamingThinkBlock,
+  isAssistantStreamingForRender,
   shouldRenderAssistantMarkdownFromContent,
   splitLeadingAqbotDisplayContent,
   stripLeadingAqbotDisplayTags,
@@ -77,5 +80,49 @@ describe('chat streaming helpers', () => {
       `${web}${knowledge}answer`,
       ['knowledge-retrieval', 'memory-retrieval'],
     )).toBe(`${web}answer`);
+  });
+
+  it('temporarily closes streamed native think blocks without dropping leading text', () => {
+    const content = '<think>好的，用户让我讲个笑话。';
+
+    expect(closeStreamingThinkBlock(content, true)).toBe(
+      `<think>\n好的，用户让我讲个笑话。${THINKING_LOADING_MARKER}\n</think>\n\n`,
+    );
+  });
+
+  it('does not alter completed, incomplete, or non-streaming think content', () => {
+    expect(closeStreamingThinkBlock('<think>done</think>\n\nanswer', true)).toBe('<think>done</think>\n\nanswer');
+    expect(closeStreamingThinkBlock('<thi', true)).toBe('<thi');
+    expect(closeStreamingThinkBlock('<think>still thinking', false)).toBe('<think>still thinking');
+  });
+
+  it('temporarily closes streamed think blocks with attributes', () => {
+    expect(closeStreamingThinkBlock('<think data-aqbot="1">\nreasoning', true)).toBe(
+      `<think data-aqbot="1">\nreasoning${THINKING_LOADING_MARKER}\n</think>\n\n`,
+    );
+    expect(closeStreamingThinkBlock('<think totalMs="123">done</think>\n\nanswer', true)).toBe(
+      '<think totalMs="123">done</think>\n\nanswer',
+    );
+  });
+
+  it('keeps partial assistant messages on the streaming renderer even when ids differ', () => {
+    expect(isAssistantStreamingForRender({
+      isStreaming: true,
+      messageId: 'real-message-id',
+      streamingMessageId: 'temp-assistant-id',
+      status: 'partial',
+    })).toBe(true);
+    expect(isAssistantStreamingForRender({
+      isStreaming: true,
+      messageId: 'real-message-id',
+      streamingMessageId: 'temp-assistant-id',
+      status: 'complete',
+    })).toBe(false);
+    expect(isAssistantStreamingForRender({
+      isStreaming: false,
+      messageId: 'real-message-id',
+      streamingMessageId: 'temp-assistant-id',
+      status: 'partial',
+    })).toBe(false);
   });
 });

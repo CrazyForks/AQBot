@@ -31,6 +31,13 @@ describe('Phase A feedback regressions', () => {
     expect(cssSource).toMatch(/\.aqbot-input-textarea[\s\S]*scrollbar-width:\s*thin/i);
   });
 
+  it('feeds normalized assistant markdown content into the stream renderer', () => {
+    const chatViewSource = readSource('src/components/chat/ChatView.tsx');
+
+    expect(chatViewSource).toContain('const rendererContent = displaySplit.body;');
+    expect(chatViewSource).not.toContain('const rendererContent = displaySplit.prefix ? displaySplit.body : content;');
+  });
+
   it('keeps a null conversation max tokens override visually off instead of hydrating it from the global default', () => {
     const modalSource = readSource('src/components/chat/ConversationSettingsModal.tsx');
 

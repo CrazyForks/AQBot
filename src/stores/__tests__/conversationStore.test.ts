@@ -283,6 +283,228 @@ describe('conversationStore pagination', () => {
     vi.useRealTimers();
   });
 
+  it('keeps the initial streaming think tag when later chunks flush separately', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map<string, (event: unknown) => void>();
+    listenMock.mockImplementation(async (eventName: string, handler: (event: unknown) => void) => {
+      listeners.set(eventName, handler);
+      return () => {};
+    });
+    const { useConversationStore } = await import('../conversationStore');
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      streaming: true,
+      streamingMessageId: 'temp-assistant-1',
+      streamingConversationId: 'conv-1',
+      thinkingActiveMessageIds: new Set<string>(),
+      messages: [
+        {
+          ...makeMessage(2),
+          id: 'temp-assistant-1',
+          conversation_id: 'conv-1',
+          role: 'assistant',
+          content: '',
+          status: 'partial',
+        },
+      ],
+    });
+
+    await useConversationStore.getState().startStreamListening();
+    const onChunk = listeners.get('chat-stream-chunk');
+    expect(onChunk).toBeTypeOf('function');
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-1',
+        model_id: 'deepseek-v4-pro',
+        provider_id: 'provider-1',
+        chunk: {
+          content: '<think data-aqbot="1">\n嗯',
+          thinking: '',
+          tool_calls: null,
+          done: false,
+          usage: null,
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(20);
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-1',
+        model_id: 'deepseek-v4-pro',
+        provider_id: 'provider-1',
+        chunk: {
+          content: '，',
+          thinking: '',
+          tool_calls: null,
+          done: false,
+          usage: null,
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(20);
+
+    const message = useConversationStore.getState().messages.find((item) => item.id === 'assistant-1');
+    expect(message?.content).toBe('<think data-aqbot="1">\n嗯，');
+    expect(Array.from(useConversationStore.getState().thinkingActiveMessageIds)).toEqual(['assistant-1']);
+    vi.useRealTimers();
+  });
+
+  it('preserves local streaming think content when a message refresh races with chunks', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map<string, (event: unknown) => void>();
+    listenMock.mockImplementation(async (eventName: string, handler: (event: unknown) => void) => {
+      listeners.set(eventName, handler);
+      return () => {};
+    });
+    const { useConversationStore } = await import('../conversationStore');
+    const user = {
+      ...makeMessage(1),
+      id: 'user-1',
+      conversation_id: 'conv-1',
+      role: 'user' as const,
+      content: '你好',
+      provider_id: null,
+      model_id: null,
+      parent_message_id: null,
+    };
+    const placeholder = {
+      ...makeMessage(2),
+      id: 'temp-assistant-1',
+      conversation_id: 'conv-1',
+      role: 'assistant' as const,
+      content: '',
+      status: 'partial' as const,
+      parent_message_id: user.id,
+    };
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      streaming: true,
+      streamingMessageId: placeholder.id,
+      streamingConversationId: 'conv-1',
+      thinkingActiveMessageIds: new Set<string>(),
+      messages: [user, placeholder],
+    });
+
+    await useConversationStore.getState().startStreamListening();
+    const onChunk = listeners.get('chat-stream-chunk');
+    expect(onChunk).toBeTypeOf('function');
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-1',
+        model_id: 'deepseek-v4-pro',
+        provider_id: 'provider-1',
+        chunk: {
+          content: '<think data-aqbot="1">\n嗯',
+          thinking: '',
+          tool_calls: null,
+          done: false,
+          usage: null,
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(20);
+
+    invokeMock.mockResolvedValueOnce(makePage([
+      user,
+      {
+        ...placeholder,
+        id: 'assistant-1',
+        content: '',
+      },
+    ], false));
+    await useConversationStore.getState().fetchMessages('conv-1');
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-1',
+        model_id: 'deepseek-v4-pro',
+        provider_id: 'provider-1',
+        chunk: {
+          content: '，',
+          thinking: '',
+          tool_calls: null,
+          done: false,
+          usage: null,
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(20);
+
+    const message = useConversationStore.getState().messages.find((item) => item.id === 'assistant-1');
+    expect(message?.content).toBe('<think data-aqbot="1">\n嗯，');
+    vi.useRealTimers();
+  });
+
+  it('preserves local streaming think content when version hydration races with chunks', async () => {
+    const { useConversationStore } = await import('../conversationStore');
+    const user = {
+      ...makeMessage(1),
+      id: 'user-1',
+      conversation_id: 'conv-1',
+      role: 'user' as const,
+      content: '你好',
+      provider_id: null,
+      model_id: null,
+      parent_message_id: null,
+    };
+    const previousVersion = {
+      ...makeMessage(2),
+      id: 'assistant-old',
+      conversation_id: 'conv-1',
+      role: 'assistant' as const,
+      content: '<think>old</think>\n\nold answer',
+      status: 'complete' as const,
+      parent_message_id: user.id,
+      provider_id: 'provider-1',
+      model_id: 'deepseek-v4-pro',
+      version_index: 0,
+      is_active: false,
+    };
+    const streamingVersion = {
+      ...makeMessage(3),
+      id: 'assistant-1',
+      conversation_id: 'conv-1',
+      role: 'assistant' as const,
+      content: '<think data-aqbot="1">\n嗯',
+      status: 'partial' as const,
+      parent_message_id: user.id,
+      provider_id: 'provider-1',
+      model_id: 'deepseek-v4-pro',
+      version_index: 1,
+      is_active: true,
+    };
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      streaming: true,
+      streamingMessageId: streamingVersion.id,
+      streamingConversationId: 'conv-1',
+      thinkingActiveMessageIds: new Set([streamingVersion.id]),
+      messages: [user, previousVersion, streamingVersion],
+    });
+
+    useConversationStore.getState().hydrateMessageVersions(user.id, [
+      previousVersion,
+      {
+        ...streamingVersion,
+        content: '',
+      },
+    ]);
+
+    const message = useConversationStore.getState().messages.find((item) => item.id === streamingVersion.id);
+    expect(message?.content).toBe('<think data-aqbot="1">\n嗯');
+    expect(message?.status).toBe('partial');
+  });
+
   it('applies early RAG retrieval events to the temporary streaming assistant', async () => {
     const listeners = new Map<string, (event: unknown) => void>();
     listenMock.mockImplementation(async (eventName: string, handler: (event: unknown) => void) => {

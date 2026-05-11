@@ -1,4 +1,5 @@
 import { getMarkdown, parseMarkdownToStructure, type BaseNode } from 'stream-markdown-parser';
+import { normalizeThinkTagsForMarkdown } from './thinkTags';
 
 export type ChatMarkdownNode = BaseNode;
 
@@ -25,7 +26,7 @@ const chatMarkdown = getMarkdown('aqbot-chat', {
 });
 
 export function parseChatMarkdown(content: string): ChatMarkdownNode[] {
-  return parseMarkdownToStructure(content, chatMarkdown, {
+  return parseMarkdownToStructure(normalizeThinkTagsForMarkdown(content), chatMarkdown, {
     customHtmlTags: [...CHAT_CUSTOM_HTML_TAGS],
   });
 }

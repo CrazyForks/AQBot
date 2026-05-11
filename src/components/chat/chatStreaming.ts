@@ -1,3 +1,5 @@
+import { normalizeThinkTagsForMarkdown } from '@/lib/thinkTags';
+
 export function getStreamingLoadingState(
   isStreaming: boolean,
   content: unknown,
@@ -17,6 +19,44 @@ export function shouldRenderAssistantMarkdownFromContent(
   streamedInCurrentSession: boolean,
 ): boolean {
   return isStreaming || streamedInCurrentSession;
+}
+
+export const THINKING_LOADING_MARKER = '<!--aqbot-thinking-loading-->';
+
+export function closeStreamingThinkBlock(content: string, isStreaming: boolean): string {
+  if (!isStreaming || content.includes(THINKING_LOADING_MARKER)) {
+    return content;
+  }
+
+  let lastOpenIndex = -1;
+  for (const match of content.matchAll(/<think\b[^>]*>/gi)) {
+    lastOpenIndex = match.index ?? -1;
+  }
+  if (lastOpenIndex < 0) {
+    return content;
+  }
+
+  let lastCloseIndex = -1;
+  for (const match of content.matchAll(/<\/think\s*>/gi)) {
+    lastCloseIndex = match.index ?? -1;
+  }
+  if (lastCloseIndex > lastOpenIndex) {
+    return content;
+  }
+
+  return normalizeThinkTagsForMarkdown(`${content}${THINKING_LOADING_MARKER}\n</think>\n\n`);
+}
+
+export function isAssistantStreamingForRender(input: {
+  isStreaming: boolean;
+  messageId?: string | null;
+  streamingMessageId?: string | null;
+  status?: string | null;
+}): boolean {
+  if (!input.isStreaming || !input.messageId) {
+    return false;
+  }
+  return input.messageId === input.streamingMessageId || input.status === 'partial';
 }
 
 export function hasModelVisibleContent(content: unknown, stripDisplayTags: (content: string) => string): boolean {

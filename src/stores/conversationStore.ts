@@ -457,6 +457,24 @@ function isTemporaryMessageId(messageId: string | null | undefined): messageId i
   return typeof messageId === 'string' && messageId.startsWith('temp-');
 }
 
+function collectActiveStreamingMessageIds(
+  state: ConversationState,
+  conversationId: string | null | undefined = state.streamingConversationId,
+): string[] {
+  if (!state.streaming || state.streamingConversationId !== conversationId) {
+    return [];
+  }
+
+  return [
+    state.streamingMessageId,
+    _streamBuffer?.messageId,
+    _streamBuffer?.resolvedId,
+    _pendingUiChunk?.messageId,
+  ].filter((messageId): messageId is string => (
+    typeof messageId === 'string' && messageId.length > 0 && !isTemporaryMessageId(messageId)
+  ));
+}
+
 function rememberPendingLocalVersionSelection(
   conversationId: string,
   parentMessageId: string,
@@ -731,7 +749,6 @@ function appendStreamChunk(
   modelId?: string,
   providerId?: string,
 ) {
-
   // Accumulate into stream buffer only in single-stream mode
   // (parallel multi-model streams would corrupt the shared buffer)
   if (!_isMultiModelActive) {
@@ -747,7 +764,9 @@ function appendStreamChunk(
   }
 
   // Only update messages in UI if this is the active conversation
-  if (get().activeConversationId !== conversationId) return;
+  if (get().activeConversationId !== conversationId) {
+    return;
+  }
 
   if (_pendingUiChunk && (
     _pendingUiChunk.conversationId !== conversationId
@@ -789,7 +808,9 @@ function flushPendingStreamChunk(
   if (!pending) return;
 
   const { messageId, content, conversationId, modelId: chunkModelId, providerId: chunkProviderId } = pending;
-  if (get().activeConversationId !== conversationId) return;
+  if (get().activeConversationId !== conversationId) {
+    return;
+  }
 
   const resolvedPendingSelections: Array<{ pending: PendingLocalVersionSelection; messageId: string }> = [];
   set((s) => {
@@ -2605,6 +2626,19 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
   fetchMessages: async (conversationId, preserveMessageIds = []) => {
     const requestSeq = _activeMessageLoadSeq;
+    const effectivePreserveMessageIds = new Set(preserveMessageIds);
+    const collectActiveStreamingPreserveIds = () => {
+      for (const messageId of collectActiveStreamingMessageIds(get(), conversationId)) {
+        effectivePreserveMessageIds.add(messageId);
+      }
+    };
+
+    collectActiveStreamingPreserveIds();
+    if (get().streaming && get().streamingConversationId === conversationId) {
+      flushPendingStreamChunk(set, get);
+      collectActiveStreamingPreserveIds();
+    }
+
     set({ loading: true });
     try {
       const page = await invoke<MessagePage>('list_messages_page', {
@@ -2612,12 +2646,17 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         limit: MESSAGE_PAGE_SIZE,
         beforeMessageId: null,
       });
+      collectActiveStreamingPreserveIds();
       if (requestSeq !== _activeMessageLoadSeq || get().activeConversationId !== conversationId) {
         return;
       }
 
       set((s) => {
-        const messages = mergePreservedMessages(page.messages, preserveMessageIds, s.messages);
+        const messages = mergePreservedMessages(
+          page.messages,
+          Array.from(effectivePreserveMessageIds),
+          s.messages,
+        );
         return {
           messages,
           loading: false,
@@ -3016,6 +3055,30 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     const resolvedPendingSelections: Array<{ pending: PendingLocalVersionSelection; messageId: string }> = [];
     set((s) => {
       let versionsForMerge = versions;
+      const streamingMessageIds = new Set(collectActiveStreamingMessageIds(s));
+      if (streamingMessageIds.size > 0) {
+        versionsForMerge = versionsForMerge.map((version) => {
+          if (!streamingMessageIds.has(version.id)) {
+            return version;
+          }
+          const localMessage = s.messages.find((message) =>
+            message.id === version.id
+            && message.parent_message_id === parentMessageId
+            && message.role === 'assistant'
+          );
+          if (!localMessage?.content) {
+            return version;
+          }
+          return {
+            ...version,
+            content: mergeDbRagDisplayPrefix(version.content, localMessage.content),
+            status: localMessage.status,
+            thinking: localMessage.thinking ?? version.thinking,
+            is_active: localMessage.is_active,
+          };
+        });
+      }
+
       const resolvedStreamingMessageId = (() => {
         if (!isTemporaryMessageId(s.streamingMessageId)) {
           return null;
