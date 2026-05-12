@@ -187,6 +187,9 @@ pub async fn chat_completions(
         }
     };
 
+    let mut request = request;
+    request.model = model_id.clone();
+
     if request.stream {
         handle_stream(
             adapter,
@@ -685,6 +688,153 @@ pub(crate) fn error_response(status: StatusCode, message: &str) -> axum::respons
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aqbot_core::{
+        crypto::{encrypt_key, key_prefix},
+        db::{create_test_pool, DbHandle},
+        repo::{gateway, provider},
+        types::{CreateProviderInput, ModelCapability, ModelType},
+    };
+    use axum::{
+        body::{to_bytes, Body},
+        extract::State,
+        http::{header, HeaderMap, Method, Request, Response, StatusCode},
+        routing::any,
+        Router,
+    };
+    use std::sync::{Arc, Mutex};
+    use tower::ServiceExt;
+
+    use crate::{routes::create_router, server::GatewayAppState};
+
+    #[derive(Clone, Debug)]
+    struct CapturedChatRequest {
+        body: serde_json::Value,
+    }
+
+    #[derive(Clone)]
+    struct MockChatUpstreamState {
+        captures: Arc<Mutex<Vec<CapturedChatRequest>>>,
+        headers: HeaderMap,
+        body: String,
+    }
+
+    async fn mock_chat_upstream_handler(
+        State(state): State<MockChatUpstreamState>,
+        request: Request<Body>,
+    ) -> Response<Body> {
+        let bytes = to_bytes(request.into_body(), usize::MAX).await.unwrap();
+        state
+            .captures
+            .lock()
+            .unwrap()
+            .push(CapturedChatRequest {
+                body: serde_json::from_slice(&bytes).unwrap(),
+            });
+
+        let mut response = Response::builder().status(StatusCode::OK);
+        for (name, value) in state.headers.iter() {
+            response = response.header(name, value);
+        }
+        response.body(Body::from(state.body.clone())).unwrap()
+    }
+
+    async fn spawn_mock_chat_upstream(
+        headers: HeaderMap,
+        body: String,
+    ) -> (
+        String,
+        Arc<Mutex<Vec<CapturedChatRequest>>>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        let captures = Arc::new(Mutex::new(Vec::new()));
+        let state = MockChatUpstreamState {
+            captures: captures.clone(),
+            headers,
+            body,
+        };
+        let app = Router::new()
+            .fallback(any(mock_chat_upstream_handler))
+            .with_state(state);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let task = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        (format!("http://{}", addr), captures, task)
+    }
+
+    async fn seed_chat_router_with_duplicate_model(
+        api_host: &str,
+    ) -> (Router, DbHandle, String, GatewayAppState) {
+        let handle = create_test_pool().await.unwrap();
+        let db = &handle.conn;
+        let gateway_key = gateway::create_gateway_key(db, "Chat Test Key", None)
+            .await
+            .unwrap();
+        let master_key = [7u8; 32];
+
+        for provider_name in ["DeepSeek", "DeepSeek Backup"] {
+            let provider = provider::create_provider(
+                db,
+                CreateProviderInput {
+                    name: provider_name.into(),
+                    provider_type: ProviderType::DeepSeek,
+                    api_host: api_host.into(),
+                    api_path: None,
+                    enabled: true,
+                    builtin_id: None,
+                },
+            )
+            .await
+            .unwrap();
+            provider::save_models(
+                db,
+                &provider.id,
+                &[Model {
+                    provider_id: provider.id.clone(),
+                    model_id: "deepseek-v4-pro".into(),
+                    name: "deepseek-v4-pro".into(),
+                    group_name: None,
+                    model_type: ModelType::Chat,
+                    capabilities: vec![ModelCapability::TextChat],
+                    max_tokens: Some(4096),
+                    enabled: true,
+                    param_overrides: None,
+                }],
+            )
+            .await
+            .unwrap();
+            provider::add_provider_key(
+                db,
+                &provider.id,
+                &encrypt_key("upstream-secret", &master_key).unwrap(),
+                &key_prefix("upstream-secret"),
+            )
+            .await
+            .unwrap();
+        }
+
+        let state = GatewayAppState {
+            db: handle.conn.clone(),
+            master_key,
+        };
+        (
+            create_router(state.clone()),
+            handle,
+            gateway_key.plain_key,
+            state,
+        )
+    }
+
+    fn chat_request_body(stream: bool) -> String {
+        json!({
+            "model": "deepseek/deepseek-v4-pro",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "stream": stream
+        })
+        .to_string()
+    }
 
     // ── provider_slug ─────────────────────────────────────────────────────────
 
@@ -944,5 +1094,83 @@ mod tests {
             payload["choices"][0]["delta"]["reasoning_content"],
             json!("step-by-step")
         );
+    }
+
+    #[tokio::test]
+    async fn chat_completions_sends_canonical_model_to_upstream_for_namespaced_non_stream() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+        let upstream_body = json!({
+            "id": "chatcmpl-upstream",
+            "object": "chat.completion",
+            "model": "deepseek-v4-pro",
+            "choices": [{
+                "index": 0,
+                "message": { "role": "assistant", "content": "ok" },
+                "finish_reason": "stop"
+            }],
+            "usage": { "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5 }
+        })
+        .to_string();
+        let (upstream_base, captures, upstream_task) =
+            spawn_mock_chat_upstream(headers, upstream_body).await;
+        let (app, _handle, gateway_key, _) =
+            seed_chat_router_with_duplicate_model(&upstream_base).await;
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", gateway_key))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(chat_request_body(false)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let captured = captures.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(captured[0].body["model"], "deepseek-v4-pro");
+
+        upstream_task.abort();
+    }
+
+    #[tokio::test]
+    async fn chat_completions_sends_canonical_model_to_upstream_for_namespaced_stream() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "text/event-stream".parse().unwrap());
+        let upstream_body = concat!(
+            "data: {\"id\":\"chatcmpl-upstream\",\"object\":\"chat.completion.chunk\",\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ok\"},\"finish_reason\":null}],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":2,\"total_tokens\":5}}\n\n",
+            "data: [DONE]\n\n"
+        )
+        .to_string();
+        let (upstream_base, captures, upstream_task) =
+            spawn_mock_chat_upstream(headers, upstream_body).await;
+        let (app, _handle, gateway_key, _) =
+            seed_chat_router_with_duplicate_model(&upstream_base).await;
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/v1/chat/completions")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", gateway_key))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(chat_request_body(true)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let _ = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let captured = captures.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(captured[0].body["model"], "deepseek-v4-pro");
+
+        upstream_task.abort();
     }
 }

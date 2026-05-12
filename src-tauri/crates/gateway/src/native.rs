@@ -416,6 +416,48 @@ fn extract_model_from_body(
         })
 }
 
+fn should_rewrite_body_model(protocol: NativeProtocol) -> bool {
+    matches!(
+        protocol,
+        NativeProtocol::OpenAiResponses
+            | NativeProtocol::AnthropicMessages
+            | NativeProtocol::AnthropicCountTokens
+    )
+}
+
+fn rewrite_body_model(
+    body: &Bytes,
+    body_json: Option<&serde_json::Value>,
+    protocol: NativeProtocol,
+    model_id: Option<&str>,
+) -> Result<Bytes, axum::response::Response> {
+    if !should_rewrite_body_model(protocol) {
+        return Ok(body.clone());
+    }
+
+    let Some(model_id) = model_id else {
+        return Ok(body.clone());
+    };
+    let Some(mut value) = body_json.cloned() else {
+        return Ok(body.clone());
+    };
+
+    let Some(object) = value.as_object_mut() else {
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "Native gateway request body must be a JSON object",
+        ));
+    };
+
+    object.insert(
+        "model".to_string(),
+        serde_json::Value::String(model_id.to_string()),
+    );
+    serde_json::to_vec(&value)
+        .map(Bytes::from)
+        .map_err(|e| error_response(StatusCode::BAD_REQUEST, &format!("Invalid JSON body: {e}")))
+}
+
 fn build_upstream_url(
     base_url: &str,
     path: &str,
@@ -871,7 +913,8 @@ async fn handle_native_request(
         Err(response) => return response,
     };
 
-    let upstream_path = match protocol.upstream_path(gemini_model.as_deref()) {
+    let upstream_model = resolved.model_id.as_deref().or(gemini_model.as_deref());
+    let upstream_path = match protocol.upstream_path(upstream_model) {
         Ok(path) => path,
         Err(response) => return response,
     };
@@ -902,13 +945,22 @@ async fn handle_native_request(
             return error_response(StatusCode::BAD_GATEWAY, &e.to_string());
         }
     };
+    let upstream_body = match rewrite_body_model(
+        &body,
+        body_json.as_ref(),
+        protocol,
+        resolved.model_id.as_deref(),
+    ) {
+        Ok(body) => body,
+        Err(response) => return response,
+    };
     let request_builder = match build_upstream_request(
         client,
         protocol,
         &method,
         &upstream_url,
         &headers,
-        body,
+        upstream_body,
         &resolved.request_ctx.api_key,
     ) {
         Ok(builder) => builder,
@@ -1454,6 +1506,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn openai_responses_sends_canonical_model_body_for_namespaced_model() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+        let upstream_body = json!({
+            "id": "resp_namespaced",
+            "object": "response",
+            "usage": {
+                "input_tokens": 2,
+                "output_tokens": 1,
+                "total_tokens": 3
+            }
+        })
+        .to_string();
+        let (upstream_base, captures, upstream_task) =
+            spawn_mock_upstream(StatusCode::OK, headers, upstream_body).await;
+        let (app, _handle, gateway_key, _) =
+            seed_native_router(ProviderType::OpenAI, &upstream_base, "gpt-5").await;
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/v1/responses")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", gateway_key))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": "native-provider/gpt-5",
+                            "input": "hello"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let captured = captures.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(captured[0].body["model"], "gpt-5");
+
+        upstream_task.abort();
+    }
+
+    #[tokio::test]
     async fn anthropic_stream_proxy_records_usage() {
         let mut headers = HeaderMap::new();
         headers.insert(header::CONTENT_TYPE, "text/event-stream".parse().unwrap());
@@ -1528,6 +1626,48 @@ mod tests {
         assert_eq!(logs[0].path, "/v1/messages");
         assert_eq!(logs[0].request_tokens, 61);
         assert_eq!(logs[0].response_tokens, 17);
+
+        upstream_task.abort();
+    }
+
+    #[tokio::test]
+    async fn gemini_path_uses_canonical_model_for_namespaced_model() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+        let upstream_body = json!({ "totalTokens": 27 }).to_string();
+        let (upstream_base, captures, upstream_task) =
+            spawn_mock_upstream(StatusCode::OK, headers, upstream_body).await;
+        let (app, _handle, gateway_key, _) =
+            seed_native_router(ProviderType::Gemini, &upstream_base, "gemini-2.5-pro").await;
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/v1beta/models/native-provider%2Fgemini-2.5-pro:countTokens")
+                    .header(header::AUTHORIZATION, format!("Bearer {}", gateway_key))
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        json!({
+                            "contents": [{
+                                "role": "user",
+                                "parts": [{ "text": "hello" }]
+                            }]
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let captured = captures.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(
+            captured[0].path_and_query,
+            "/v1beta/models/gemini-2.5-pro:countTokens?key=upstream-secret"
+        );
 
         upstream_task.abort();
     }
