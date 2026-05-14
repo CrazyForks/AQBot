@@ -181,6 +181,49 @@ describe('InputArea', () => {
     settingsState.settings.document_attachment_reading_enabled = false;
   });
 
+  const waitForNextFrame = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+  it('focuses the chat textarea when the window regains focus without another active input', async () => {
+    render(
+      <App>
+        <InputArea />
+      </App>,
+    );
+
+    const textarea = screen.getByPlaceholderText('chat.inputPlaceholder') as HTMLTextAreaElement;
+    expect(document.activeElement).not.toBe(textarea);
+
+    window.dispatchEvent(new Event('focus'));
+    await waitForNextFrame();
+
+    expect(document.activeElement).toBe(textarea);
+  });
+
+  it('does not steal focus from another focused input when the window regains focus', async () => {
+    render(
+      <>
+        <App>
+          <InputArea />
+        </App>
+        <input aria-label="external-input" />
+      </>,
+    );
+
+    const textarea = screen.getByPlaceholderText('chat.inputPlaceholder') as HTMLTextAreaElement;
+    const externalInput = screen.getByLabelText('external-input') as HTMLInputElement;
+    externalInput.focus();
+    expect(document.activeElement).toBe(externalInput);
+
+    window.dispatchEvent(new Event('focus'));
+    await waitForNextFrame();
+
+    expect(document.activeElement).toBe(externalInput);
+    expect(document.activeElement).not.toBe(textarea);
+  });
+
   it('clears the textarea immediately after sending even while search-backed send is still pending', async () => {
     let resolveSend!: () => void;
     sendMessage.mockImplementationOnce(

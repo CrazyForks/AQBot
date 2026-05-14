@@ -148,6 +148,33 @@ export function InputArea() {
     return `${label} (${formatShortcutForDisplay(binding)})`;
   }, [settings]);
 
+  const focusChatTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const activeElement = document.activeElement;
+    const canRestoreFocus =
+      !activeElement ||
+      activeElement === document.body ||
+      activeElement === document.documentElement ||
+      activeElement === textarea;
+
+    if (canRestoreFocus) {
+      textarea.focus({ preventScroll: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      requestAnimationFrame(focusChatTextarea);
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [focusChatTextarea]);
+
   // Search state
   const searchEnabled = useConversationStore((s) => s.searchEnabled);
   const searchProviderId = useConversationStore((s) => s.searchProviderId);
