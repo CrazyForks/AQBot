@@ -26,6 +26,8 @@ fn model_to_kb(m: knowledge_bases::Model) -> KnowledgeBase {
         chunk_size: m.chunk_size,
         chunk_overlap: m.chunk_overlap,
         separator: m.separator,
+        index_concurrency: m.index_concurrency,
+        index_interval_ms: m.index_interval_ms,
     }
 }
 
@@ -85,6 +87,8 @@ pub async fn create_knowledge_base(
         chunk_size: Set(None),
         chunk_overlap: Set(None),
         separator: Set(None),
+        index_concurrency: Set(None),
+        index_interval_ms: Set(None),
     };
 
     am.insert(db).await?;
@@ -140,6 +144,12 @@ pub async fn update_knowledge_base(
     }
     if input.update_separator {
         am.separator = Set(input.separator);
+    }
+    if input.update_index_concurrency {
+        am.index_concurrency = Set(input.index_concurrency);
+    }
+    if input.update_index_interval_ms {
+        am.index_interval_ms = Set(input.index_interval_ms);
     }
     am.update(db).await?;
 

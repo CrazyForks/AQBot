@@ -25,6 +25,7 @@ pub struct AppState {
     pub auto_backup_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     pub webdav_sync_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     pub vector_store: Arc<aqbot_core::vector_store::VectorStore>,
+    pub knowledge_index_scheduler: Arc<knowledge_index_scheduler::KnowledgeIndexScheduler>,
     pub stream_cancel_flags: Arc<Mutex<std::collections::HashMap<String, Arc<AtomicBool>>>>,
     pub agent_cancel_tokens:
         Arc<Mutex<std::collections::HashMap<String, open_agent_sdk::CancellationToken>>>,
@@ -39,6 +40,7 @@ pub struct AppState {
 mod commands;
 mod context_manager;
 mod indexing;
+pub mod knowledge_index_scheduler;
 mod paths;
 mod tray;
 mod window_lifecycle;
@@ -474,6 +476,9 @@ pub fn run() {
                 auto_backup_handle: Arc::new(Mutex::new(None)),
                 webdav_sync_handle: Arc::new(Mutex::new(None)),
                 vector_store: Arc::new(vector_store),
+                knowledge_index_scheduler: Arc::new(
+                    knowledge_index_scheduler::KnowledgeIndexScheduler::default(),
+                ),
                 stream_cancel_flags: Arc::new(Mutex::new(std::collections::HashMap::new())),
                 agent_cancel_tokens: Arc::new(Mutex::new(std::collections::HashMap::new())),
                 agent_permission_senders: Arc::new(Mutex::new(std::collections::HashMap::new())),

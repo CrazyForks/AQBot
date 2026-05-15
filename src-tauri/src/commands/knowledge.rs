@@ -1,6 +1,14 @@
+use crate::knowledge_index_scheduler::KnowledgeIndexScheduleOptions;
 use crate::AppState;
 use aqbot_core::types::*;
 use tauri::{AppHandle, Emitter, State};
+
+fn knowledge_index_schedule_options(kb: &KnowledgeBase) -> KnowledgeIndexScheduleOptions {
+    KnowledgeIndexScheduleOptions {
+        index_concurrency: kb.index_concurrency,
+        index_interval_ms: kb.index_interval_ms,
+    }
+}
 
 #[tauri::command]
 pub async fn list_knowledge_bases(
@@ -95,21 +103,27 @@ pub async fn add_knowledge_document(
         let chunk_sz = kb.chunk_size;
         let chunk_ov = kb.chunk_overlap;
         let kb_id = base_id.clone();
+        let scheduler = state.knowledge_index_scheduler.clone();
+        let schedule_options = knowledge_index_schedule_options(&kb);
 
         tokio::spawn(async move {
-            let result = crate::indexing::index_knowledge_document(
-                &db,
-                &master_key,
-                &vector_store,
-                &kb_id,
-                &doc_id,
-                &src_path,
-                &mime,
-                &ep,
-                chunk_sz,
-                chunk_ov,
-            )
-            .await;
+            let result = scheduler
+                .run(&kb_id, schedule_options, || async {
+                    crate::indexing::index_knowledge_document(
+                        &db,
+                        &master_key,
+                        &vector_store,
+                        &kb_id,
+                        &doc_id,
+                        &src_path,
+                        &mime,
+                        &ep,
+                        chunk_sz,
+                        chunk_ov,
+                    )
+                    .await
+                })
+                .await;
 
             if let Err(e) = &result {
                 let err_msg = e.to_string();
@@ -187,7 +201,10 @@ pub async fn rebuild_knowledge_index(
 
     let embedding_provider = kb
         .embedding_provider
+        .clone()
         .ok_or("No embedding provider configured")?;
+
+    let schedule_options = knowledge_index_schedule_options(&kb);
 
     let collection_id = format!("kb_{}", base_id);
 
@@ -218,103 +235,60 @@ pub async fn rebuild_knowledge_index(
     let master_key = state.master_key;
     let vector_store = state.vector_store.clone();
     let ep = embedding_provider.clone();
+    let scheduler = state.knowledge_index_scheduler.clone();
 
     tokio::spawn(async move {
         // Process each document individually so status updates per-doc
         for doc in &docs {
-            let chunks = match vector_store
-                .list_document_chunks_raw(&collection_id, &doc.id)
-                .await
-            {
-                Ok(c) => c,
-                Err(e) => {
-                    let err_msg = e.to_string();
+            let result = scheduler
+                .run(&base_id, schedule_options, || async {
+                    let chunks = vector_store
+                        .list_document_chunks_raw(&collection_id, &doc.id)
+                        .await?;
+
+                    if chunks.is_empty() {
+                        return Ok::<(), aqbot_core::error::AQBotError>(());
+                    }
+
+                    let texts: Vec<String> = chunks
+                        .iter()
+                        .map(|(_, _, content)| content.clone())
+                        .collect();
+                    let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
+
+                    let embed_response =
+                        crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None)
+                            .await?;
+                    let entries: Vec<(i64, Vec<f32>)> = rowids
+                        .into_iter()
+                        .zip(embed_response.embeddings.into_iter())
+                        .collect();
+
+                    vector_store
+                        .upsert_document_embeddings(&collection_id, entries)
+                        .await?;
+
+                    Ok(())
+                })
+                .await;
+
+            match result {
+                Ok(()) => {
                     let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                        &db,
-                        &doc.id,
-                        "failed",
-                        Some(&err_msg),
+                        &db, &doc.id, "ready", None,
                     )
                     .await;
                     let _ = app.emit(
                         "knowledge-document-indexed",
                         serde_json::json!({
                             "documentId": doc.id,
-                            "success": false,
-                            "error": err_msg,
+                            "success": true,
                         }),
                     );
-                    continue;
-                }
-            };
-
-            if chunks.is_empty() {
-                let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                    &db, &doc.id, "ready", None,
-                )
-                .await;
-                let _ = app.emit(
-                    "knowledge-document-indexed",
-                    serde_json::json!({ "documentId": doc.id, "success": true }),
-                );
-                continue;
-            }
-
-            let texts: Vec<String> = chunks
-                .iter()
-                .map(|(_, _, content)| content.clone())
-                .collect();
-            let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
-
-            match crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None).await {
-                Ok(embed_response) => {
-                    let entries: Vec<(i64, Vec<f32>)> = rowids
-                        .into_iter()
-                        .zip(embed_response.embeddings.into_iter())
-                        .collect();
-
-                    if let Err(e) = vector_store
-                        .upsert_document_embeddings(&collection_id, entries)
-                        .await
-                    {
-                        let err_msg = e.to_string();
-                        tracing::error!(
-                            "Failed to upsert embeddings for doc {}: {}",
-                            doc.id,
-                            err_msg
-                        );
-                        let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                            &db,
-                            &doc.id,
-                            "failed",
-                            Some(&err_msg),
-                        )
-                        .await;
-                        let _ = app.emit(
-                            "knowledge-document-indexed",
-                            serde_json::json!({
-                                "documentId": doc.id,
-                                "success": false,
-                                "error": err_msg,
-                            }),
-                        );
-                    } else {
-                        let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                            &db, &doc.id, "ready", None,
-                        )
-                        .await;
-                        let _ = app.emit(
-                            "knowledge-document-indexed",
-                            serde_json::json!({
-                                "documentId": doc.id,
-                                "success": true,
-                            }),
-                        );
-                    }
                 }
                 Err(e) => {
                     let err_msg = e.to_string();
-                    tracing::error!("Failed to embed doc {} during rebuild: {}", doc.id, err_msg);
+                    tracing::error!("Failed to rebuild doc {}: {}", doc.id, err_msg);
                     let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
                         &db,
                         &doc.id,
@@ -563,7 +537,10 @@ pub async fn rebuild_knowledge_document(
 
     let embedding_provider = kb
         .embedding_provider
+        .clone()
         .ok_or("No embedding provider configured")?;
+
+    let schedule_options = knowledge_index_schedule_options(&kb);
 
     let collection_id = format!("kb_{}", base_id);
 
@@ -594,61 +571,46 @@ pub async fn rebuild_knowledge_document(
     let vector_store = state.vector_store.clone();
     let ep = embedding_provider.clone();
     let doc_id = document_id.clone();
+    let scheduler = state.knowledge_index_scheduler.clone();
 
     tokio::spawn(async move {
-        let texts: Vec<String> = chunks
-            .iter()
-            .map(|(_, _, content)| content.clone())
-            .collect();
-        let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
+        let result = scheduler
+            .run(&base_id, schedule_options, || async {
+                let texts: Vec<String> = chunks
+                    .iter()
+                    .map(|(_, _, content)| content.clone())
+                    .collect();
+                let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
 
-        let result = crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None).await;
-
-        match result {
-            Ok(embed_response) => {
+                let embed_response =
+                    crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None)
+                        .await?;
                 let entries: Vec<(i64, Vec<f32>)> = rowids
                     .into_iter()
                     .zip(embed_response.embeddings.into_iter())
                     .collect();
 
-                if let Err(e) = vector_store
+                vector_store
                     .upsert_document_embeddings(&collection_id, entries)
-                    .await
-                {
-                    let err_msg = e.to_string();
-                    tracing::error!(
-                        "Failed to upsert embeddings for doc {}: {}",
-                        doc_id,
-                        err_msg
-                    );
-                    let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                        &db,
-                        &doc_id,
-                        "failed",
-                        Some(&err_msg),
-                    )
-                    .await;
-                    let _ = app.emit(
-                        "knowledge-document-indexed",
-                        serde_json::json!({
-                            "documentId": doc_id,
-                            "success": false,
-                            "error": err_msg,
-                        }),
-                    );
-                } else {
-                    let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
-                        &db, &doc_id, "ready", None,
-                    )
-                    .await;
-                    let _ = app.emit(
-                        "knowledge-document-indexed",
-                        serde_json::json!({
-                            "documentId": doc_id,
-                            "success": true,
-                        }),
-                    );
-                }
+                    .await?;
+
+                Ok::<(), aqbot_core::error::AQBotError>(())
+            })
+            .await;
+
+        match result {
+            Ok(()) => {
+                let _ = aqbot_core::repo::knowledge::update_document_status_with_error(
+                    &db, &doc_id, "ready", None,
+                )
+                .await;
+                let _ = app.emit(
+                    "knowledge-document-indexed",
+                    serde_json::json!({
+                        "documentId": doc_id,
+                        "success": true,
+                    }),
+                );
             }
             Err(e) => {
                 let err_msg = e.to_string();

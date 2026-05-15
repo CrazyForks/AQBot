@@ -31,6 +31,7 @@ mod m20260428_000001_add_drawing_history;
 mod m20260430_000001_add_conversation_thinking_level;
 mod m20260501_000001_add_knowledge_base_rerank_settings;
 mod m20260504_000001_split_openai_compatible_provider_types;
+mod m20260515_000001_add_knowledge_base_index_schedule;
 
 pub struct Migrator;
 
@@ -69,6 +70,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260430_000001_add_conversation_thinking_level::Migration),
             Box::new(m20260501_000001_add_knowledge_base_rerank_settings::Migration),
             Box::new(m20260504_000001_split_openai_compatible_provider_types::Migration),
+            Box::new(m20260515_000001_add_knowledge_base_index_schedule::Migration),
         ]
     }
 }
@@ -167,6 +169,26 @@ mod tests {
                     .has_column("knowledge_bases", column)
                     .await
                     .expect("check knowledge base rerank column"),
+                "missing knowledge_bases.{column}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn migrator_up_adds_knowledge_base_index_schedule_on_sqlite() {
+        let db = sqlite_test_db().await;
+
+        Migrator::up(&db, None)
+            .await
+            .expect("run sqlite migrations");
+
+        let manager = SchemaManager::new(&db);
+        for column in ["index_concurrency", "index_interval_ms"] {
+            assert!(
+                manager
+                    .has_column("knowledge_bases", column)
+                    .await
+                    .expect("check knowledge base index schedule column"),
                 "missing knowledge_bases.{column}"
             );
         }

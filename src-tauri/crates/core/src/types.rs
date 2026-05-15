@@ -1300,6 +1300,8 @@ pub struct KnowledgeBase {
     pub chunk_size: Option<i32>,
     pub chunk_overlap: Option<i32>,
     pub separator: Option<String>,
+    pub index_concurrency: Option<i32>,
+    pub index_interval_ms: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1659,6 +1661,12 @@ pub struct UpdateKnowledgeBaseInput {
     pub separator: Option<String>,
     #[serde(default)]
     pub update_separator: bool,
+    pub index_concurrency: Option<i32>,
+    #[serde(default)]
+    pub update_index_concurrency: bool,
+    pub index_interval_ms: Option<i32>,
+    #[serde(default)]
+    pub update_index_interval_ms: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

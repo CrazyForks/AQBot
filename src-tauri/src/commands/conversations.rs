@@ -4569,6 +4569,9 @@ mod tests {
             auto_backup_handle: Arc::new(Mutex::new(None)),
             webdav_sync_handle: Arc::new(Mutex::new(None)),
             vector_store,
+            knowledge_index_scheduler: Arc::new(
+                crate::knowledge_index_scheduler::KnowledgeIndexScheduler::default(),
+            ),
             stream_cancel_flags: Arc::new(Mutex::new(std::collections::HashMap::new())),
             agent_cancel_tokens: Arc::new(Mutex::new(std::collections::HashMap::new())),
             agent_permission_senders: Arc::new(Mutex::new(std::collections::HashMap::new())),

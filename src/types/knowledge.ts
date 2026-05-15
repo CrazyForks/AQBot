@@ -19,6 +19,8 @@ export type KnowledgeBase = {
   chunkSize?: number;
   chunkOverlap?: number;
   separator?: string;
+  indexConcurrency?: number;
+  indexIntervalMs?: number;
 };
 
 export type KnowledgeDocument = {
@@ -71,4 +73,8 @@ export type UpdateKnowledgeBaseInput = Partial<CreateKnowledgeBaseInput> & {
   updateChunkOverlap?: boolean;
   separator?: string;
   updateSeparator?: boolean;
+  indexConcurrency?: number;
+  updateIndexConcurrency?: boolean;
+  indexIntervalMs?: number;
+  updateIndexIntervalMs?: boolean;
 };

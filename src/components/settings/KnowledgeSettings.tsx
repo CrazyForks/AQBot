@@ -270,6 +270,8 @@ function KnowledgeBaseDetail({
     retrievalTopK: undefined as number | undefined,
     rerankProvider: undefined as string | undefined,
     rerankCandidateK: 20 as number | undefined,
+    indexConcurrency: 1 as number | undefined,
+    indexIntervalSeconds: 0 as number | undefined,
     chunkSize: undefined as number | undefined,
     chunkOverlap: undefined as number | undefined,
     separator: undefined as string | undefined,
@@ -693,6 +695,8 @@ function KnowledgeBaseDetail({
                   retrievalTopK: base.retrievalTopK ?? 5,
                   rerankProvider: base.rerankProvider ?? undefined,
                   rerankCandidateK: base.rerankCandidateK ?? 20,
+                  indexConcurrency: base.indexConcurrency ?? 1,
+                  indexIntervalSeconds: (base.indexIntervalMs ?? 0) / 1000,
                   chunkSize: base.chunkSize ?? undefined,
                   chunkOverlap: base.chunkOverlap ?? undefined,
                   separator: base.separator ?? undefined,
@@ -730,6 +734,10 @@ function KnowledgeBaseDetail({
             updateRerankProvider: true,
             rerankCandidateK: settingsForm.rerankCandidateK,
             updateRerankCandidateK: true,
+            indexConcurrency: settingsForm.indexConcurrency,
+            updateIndexConcurrency: true,
+            indexIntervalMs: Math.round((settingsForm.indexIntervalSeconds ?? 0) * 1000),
+            updateIndexIntervalMs: true,
             chunkSize: settingsForm.chunkSize,
             updateChunkSize: true,
             chunkOverlap: settingsForm.chunkOverlap,
@@ -819,6 +827,35 @@ function KnowledgeBaseDetail({
           </div>
           <Divider style={{ margin: 0 }} />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {t('settings.knowledge.indexingConfig')}
+          </Typography.Text>
+          <div className="flex items-center justify-between">
+            <span>{t('settings.knowledge.indexConcurrency')}</span>
+            <InputNumber
+              value={settingsForm.indexConcurrency}
+              onChange={(val) => setSettingsForm(s => ({ ...s, indexConcurrency: val ?? 1 }))}
+              min={1}
+              max={10}
+              style={{ width: 280 }}
+            />
+          </div>
+          <Divider style={{ margin: 0 }} />
+          <div className="flex items-center justify-between">
+            <span>{t('settings.knowledge.indexIntervalSeconds')}</span>
+            <InputNumber
+              value={settingsForm.indexIntervalSeconds}
+              onChange={(val) => setSettingsForm(s => ({ ...s, indexIntervalSeconds: val ?? 0 }))}
+              min={0}
+              max={60}
+              step={0.5}
+              style={{ width: 280 }}
+            />
+          </div>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {t('settings.knowledge.indexingThrottleHelp')}
+          </Typography.Text>
+          <Divider style={{ margin: 0 }} />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {t('settings.knowledge.chunkingConfig')}
           </Typography.Text>
           <div className="flex items-center justify-between">
@@ -886,6 +923,10 @@ function KnowledgeBaseDetail({
             updateRerankProvider: true,
             rerankCandidateK: settingsForm.rerankCandidateK,
             updateRerankCandidateK: true,
+            indexConcurrency: settingsForm.indexConcurrency,
+            updateIndexConcurrency: true,
+            indexIntervalMs: Math.round((settingsForm.indexIntervalSeconds ?? 0) * 1000),
+            updateIndexIntervalMs: true,
             chunkSize: settingsForm.chunkSize,
             updateChunkSize: true,
             chunkOverlap: settingsForm.chunkOverlap,

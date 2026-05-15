@@ -23,6 +23,8 @@ pub struct Model {
     pub chunk_overlap: Option<i32>,
     #[sea_orm(column_type = "Text", nullable)]
     pub separator: Option<String>,
+    pub index_concurrency: Option<i32>,
+    pub index_interval_ms: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
