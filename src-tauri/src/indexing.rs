@@ -28,6 +28,12 @@ pub struct ProviderEmbedFn;
 #[derive(Clone)]
 pub struct ProviderRerankFn;
 
+pub(crate) fn configured_embedding_dimensions(dimensions: Option<i32>) -> Option<usize> {
+    dimensions
+        .and_then(|value| usize::try_from(value).ok())
+        .filter(|value| *value > 0)
+}
+
 #[async_trait::async_trait]
 impl rag::AsyncEmbedFn for ProviderEmbedFn {
     async fn generate(
@@ -249,6 +255,7 @@ pub async fn index_knowledge_document(
     source_path: &str,
     mime_type: &str,
     embedding_provider: &str,
+    dimensions: Option<usize>,
     chunk_size: Option<i32>,
     chunk_overlap: Option<i32>,
 ) -> Result<()> {
@@ -274,7 +281,7 @@ pub async fn index_knowledge_document(
 
     let chunk_texts: Vec<String> = chunks.iter().map(|(_, text, _)| text.clone()).collect();
     let embed_response =
-        generate_embeddings(db, master_key, embedding_provider, chunk_texts, None).await?;
+        generate_embeddings(db, master_key, embedding_provider, chunk_texts, dimensions).await?;
 
     rag::index(
         vector_store,
@@ -337,6 +344,7 @@ pub async fn search_knowledge(
     top_k: usize,
 ) -> Result<Vec<VectorSearchResult>> {
     let kb = aqbot_core::repo::knowledge::get_knowledge_base(db, knowledge_base_id).await?;
+    let dimensions = configured_embedding_dimensions(kb.embedding_dimensions);
     let final_top_k = kb
         .retrieval_top_k
         .filter(|v| *v > 0)
@@ -363,7 +371,7 @@ pub async fn search_knowledge(
         knowledge_base_id,
         query,
         source_top_k,
-        None,
+        dimensions,
         ProviderEmbedFn,
     )
     .await?;
@@ -496,5 +504,13 @@ mod tests {
         assert_eq!(ranked[0].score, 0.3);
         assert_eq!(ranked[0].rerank_score, Some(0.91));
         assert_eq!(ranked[1].rerank_score, Some(0.82));
+    }
+
+    #[test]
+    fn configured_embedding_dimensions_uses_positive_values_only() {
+        assert_eq!(configured_embedding_dimensions(Some(3072)), Some(3072));
+        assert_eq!(configured_embedding_dimensions(Some(0)), None);
+        assert_eq!(configured_embedding_dimensions(Some(-1)), None);
+        assert_eq!(configured_embedding_dimensions(None), None);
     }
 }

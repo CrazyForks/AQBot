@@ -70,9 +70,10 @@ impl VectorStore {
     /// Ensure both the metadata and vec0 tables exist for a collection.
     pub async fn ensure_collection(&self, collection_id: &str, dimensions: usize) -> Result<()> {
         let name = Self::collection_name(collection_id);
+        let meta_table = format!("{name}_meta");
 
         self.exec(&format!(
-            "CREATE TABLE IF NOT EXISTS {name}_meta (
+            "CREATE TABLE IF NOT EXISTS {meta_table} (
                 rowid INTEGER PRIMARY KEY AUTOINCREMENT,
                 id TEXT NOT NULL UNIQUE,
                 document_id TEXT NOT NULL,
@@ -83,9 +84,15 @@ impl VectorStore {
         .await?;
 
         self.exec(&format!(
-            "CREATE INDEX IF NOT EXISTS idx_{name}_doc ON {name}_meta(document_id)"
+            "CREATE INDEX IF NOT EXISTS idx_{name}_doc ON {meta_table}(document_id)"
         ))
         .await?;
+
+        if self.table_exists(&name).await?
+            && self.collection_dimensions(&name).await? != Some(dimensions)
+        {
+            let _ = self.exec(&format!("DROP TABLE IF EXISTS {name}")).await;
+        }
 
         self.exec(&format!(
             "CREATE VIRTUAL TABLE IF NOT EXISTS {name} USING vec0(embedding float[{dimensions}])"
@@ -211,6 +218,8 @@ impl VectorStore {
         if !self.table_exists(&meta_table).await? {
             return Err(AQBotError::NotFound("Collection not found".into()));
         }
+        self.ensure_collection(collection_id, embedding.len())
+            .await?;
 
         // Determine next chunk_index for this document
         let max_index = self
@@ -380,32 +389,7 @@ impl VectorStore {
     /// This allows re-embedding without losing user edits or manually added chunks.
     pub async fn clear_embeddings(&self, collection_id: &str) -> Result<()> {
         let name = Self::collection_name(collection_id);
-
-        // Drop and recreate vec0 to clear all embeddings
-        // We need the dimensions to recreate, so read from an existing row first
-        let dim_row = self
-            .db
-            .query_one(Statement::from_string(
-                DbBackend::Sqlite,
-                format!("SELECT vec_length(embedding) AS dim FROM {name} LIMIT 1"),
-            ))
-            .await
-            .ok()
-            .flatten();
-
         let _ = self.exec(&format!("DROP TABLE IF EXISTS {name}")).await;
-
-        // Recreate vec0 if we know the dimensions
-        if let Some(row) = dim_row {
-            if let Ok(dim) = row.try_get::<i32>("", "dim") {
-                let _ = self
-                    .exec(&format!(
-                        "CREATE VIRTUAL TABLE IF NOT EXISTS {name} USING vec0(embedding float[{dim}])"
-                    ))
-                    .await;
-            }
-        }
-
         Ok(())
     }
 
@@ -492,14 +476,7 @@ impl VectorStore {
         let dimensions = entries[0].1.len();
         let name = Self::collection_name(collection_id);
 
-        // Ensure the vec0 table exists with correct dimensions
-        self.db
-            .execute(Statement::from_string(
-                DbBackend::Sqlite,
-                format!("CREATE VIRTUAL TABLE IF NOT EXISTS {name} USING vec0(embedding float[{dimensions}])"),
-            ))
-            .await
-            .map_err(Self::wrap)?;
+        self.ensure_collection(collection_id, dimensions).await?;
 
         for (rid, embedding) in &entries {
             // Delete existing row if present (ignore errors — may not exist)
@@ -626,12 +603,24 @@ impl VectorStore {
         let rid: i64 = row.try_get("", "rowid").map_err(Self::wrap)?;
         let vec_json = Self::embedding_to_json(embedding);
 
-        // Update embedding in vec0
+        self.ensure_collection(collection_id, embedding.len())
+            .await?;
+        let _ = self
+            .db
+            .execute(Statement::from_sql_and_values(
+                DbBackend::Sqlite,
+                &format!("DELETE FROM {name} WHERE rowid = $1"),
+                vec![rid.into()],
+            ))
+            .await;
+
+        // Insert embedding into vec0. DELETE+INSERT also restores rows after
+        // clearing a collection while preserving chunk metadata.
         self.db
             .execute(Statement::from_sql_and_values(
                 DbBackend::Sqlite,
-                &format!("UPDATE {name} SET embedding = $1 WHERE rowid = $2"),
-                vec![vec_json.into(), rid.into()],
+                &format!("INSERT INTO {name} (rowid, embedding) VALUES ($1, $2)"),
+                vec![rid.into(), vec_json.into()],
             ))
             .await
             .map_err(Self::wrap)?;
@@ -703,6 +692,24 @@ impl VectorStore {
         Ok(row.is_some())
     }
 
+    async fn collection_dimensions(&self, table_name: &str) -> Result<Option<usize>> {
+        let row = self
+            .db
+            .query_one(Statement::from_sql_and_values(
+                DbBackend::Sqlite,
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=$1",
+                vec![table_name.to_string().into()],
+            ))
+            .await
+            .map_err(Self::wrap)?;
+
+        let Some(row) = row else {
+            return Ok(None);
+        };
+        let sql: String = row.try_get("", "sql").map_err(Self::wrap)?;
+        Ok(parse_vec_dimension(&sql))
+    }
+
     /// List all chunks stored for a specific document within a collection.
     pub async fn list_document_chunks(
         &self,
@@ -771,5 +778,78 @@ impl VectorStore {
 
     fn wrap(e: DbErr) -> AQBotError {
         AQBotError::Provider(format!("Vector store error: {e}"))
+    }
+}
+
+fn parse_vec_dimension(sql: &str) -> Option<usize> {
+    let marker = "float[";
+    let start = sql.find(marker)? + marker.len();
+    let end = sql[start..].find(']')? + start;
+    sql[start..end].parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_orm::{ConnectOptions, Database};
+
+    async fn test_store() -> VectorStore {
+        register_sqlite_vec_extension();
+        let mut opts = ConnectOptions::new("sqlite::memory:");
+        opts.sqlx_logging(false);
+        let db = Database::connect(opts).await.unwrap();
+        VectorStore::new(db)
+    }
+
+    fn record(id: &str, document_id: &str, dimensions: usize) -> EmbeddingRecord {
+        EmbeddingRecord {
+            id: id.to_string(),
+            document_id: document_id.to_string(),
+            chunk_index: 0,
+            content: "content".to_string(),
+            embedding: vec![0.0; dimensions],
+        }
+    }
+
+    #[tokio::test]
+    async fn clear_embeddings_allows_reinsert_with_new_dimensions() {
+        let store = test_store().await;
+        let collection_id = "kb_dimension_change";
+
+        store
+            .upsert_embeddings(collection_id, vec![record("chunk-1", "doc-1", 3072)])
+            .await
+            .unwrap();
+        store.clear_embeddings(collection_id).await.unwrap();
+
+        store
+            .upsert_document_embeddings(collection_id, vec![(1, vec![0.0; 4096])])
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn existing_collection_allows_reinsert_with_new_dimensions() {
+        let store = test_store().await;
+        let collection_id = "kb_existing_dimension_change";
+
+        store
+            .upsert_embeddings(collection_id, vec![record("chunk-1", "doc-1", 3072)])
+            .await
+            .unwrap();
+
+        store
+            .upsert_document_embeddings(collection_id, vec![(1, vec![0.0; 4096])])
+            .await
+            .unwrap();
+    }
+
+    #[test]
+    fn parse_vec_dimension_reads_float_size() {
+        assert_eq!(
+            parse_vec_dimension("CREATE VIRTUAL TABLE vec_kb USING vec0(embedding float[4096])"),
+            Some(4096)
+        );
+        assert_eq!(parse_vec_dimension("CREATE TABLE vec_kb(id TEXT)"), None);
     }
 }

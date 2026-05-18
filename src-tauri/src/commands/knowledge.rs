@@ -100,6 +100,7 @@ pub async fn add_knowledge_document(
         let src_path = source_path.clone();
         let mime = mime_type.clone();
         let ep = embedding_provider.clone();
+        let dimensions = crate::indexing::configured_embedding_dimensions(kb.embedding_dimensions);
         let chunk_sz = kb.chunk_size;
         let chunk_ov = kb.chunk_overlap;
         let kb_id = base_id.clone();
@@ -118,6 +119,7 @@ pub async fn add_knowledge_document(
                         &src_path,
                         &mime,
                         &ep,
+                        dimensions,
                         chunk_sz,
                         chunk_ov,
                     )
@@ -205,6 +207,7 @@ pub async fn rebuild_knowledge_index(
         .ok_or("No embedding provider configured")?;
 
     let schedule_options = knowledge_index_schedule_options(&kb);
+    let dimensions = crate::indexing::configured_embedding_dimensions(kb.embedding_dimensions);
 
     let collection_id = format!("kb_{}", base_id);
 
@@ -256,9 +259,14 @@ pub async fn rebuild_knowledge_index(
                         .collect();
                     let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
 
-                    let embed_response =
-                        crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None)
-                            .await?;
+                    let embed_response = crate::indexing::generate_embeddings(
+                        &db,
+                        &master_key,
+                        &ep,
+                        texts,
+                        dimensions,
+                    )
+                    .await?;
                     let entries: Vec<(i64, Vec<f32>)> = rowids
                         .into_iter()
                         .zip(embed_response.embeddings.into_iter())
@@ -402,6 +410,7 @@ pub async fn add_knowledge_chunk(
     let embedding_provider = kb
         .embedding_provider
         .ok_or_else(|| "No embedding provider configured".to_string())?;
+    let dimensions = crate::indexing::configured_embedding_dimensions(kb.embedding_dimensions);
 
     let collection_id = format!("kb_{}", base_id);
     let db = state.sea_db.clone();
@@ -416,7 +425,7 @@ pub async fn add_knowledge_chunk(
             &master_key,
             &embedding_provider,
             vec![chunk_content.clone()],
-            None,
+            dimensions,
         )
         .await?;
 
@@ -464,6 +473,7 @@ pub async fn reindex_knowledge_chunk(
     let embedding_provider = kb
         .embedding_provider
         .ok_or_else(|| "No embedding provider configured".to_string())?;
+    let dimensions = crate::indexing::configured_embedding_dimensions(kb.embedding_dimensions);
 
     let collection_id = format!("kb_{}", base_id);
 
@@ -497,7 +507,7 @@ pub async fn reindex_knowledge_chunk(
                 &master_key,
                 &embedding_provider,
                 vec![chunk_content],
-                None,
+                dimensions,
             )
             .await?;
 
@@ -541,6 +551,7 @@ pub async fn rebuild_knowledge_document(
         .ok_or("No embedding provider configured")?;
 
     let schedule_options = knowledge_index_schedule_options(&kb);
+    let dimensions = crate::indexing::configured_embedding_dimensions(kb.embedding_dimensions);
 
     let collection_id = format!("kb_{}", base_id);
 
@@ -583,7 +594,7 @@ pub async fn rebuild_knowledge_document(
                 let rowids: Vec<i64> = chunks.iter().map(|(rid, _, _)| *rid).collect();
 
                 let embed_response =
-                    crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, None)
+                    crate::indexing::generate_embeddings(&db, &master_key, &ep, texts, dimensions)
                         .await?;
                 let entries: Vec<(i64, Vec<f32>)> = rowids
                     .into_iter()

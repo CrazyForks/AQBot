@@ -378,7 +378,9 @@ pub async fn collect_rag_context(
                         (
                             source_top_k,
                             kb.retrieval_threshold.unwrap_or(0.0),
-                            None,
+                            kb.embedding_dimensions
+                                .and_then(|value| usize::try_from(value).ok())
+                                .filter(|value| *value > 0),
                             final_top_k,
                             rerank_provider,
                         )
