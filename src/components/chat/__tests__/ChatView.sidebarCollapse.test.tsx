@@ -46,4 +46,12 @@ describe('ChatView sidebar collapse control', () => {
     expect(toggleSource).not.toContain('<Tooltip');
     expect(toggleSource).toContain('aria-label={label}');
   });
+
+  it('constrains long active conversation titles in the top bar', () => {
+    const source = readSource();
+
+    expect(source).toContain('aqbot-chat-title-shell');
+    expect(source).toContain('aqbot-chat-title-text');
+    expect(source).toContain('ellipsis={{ tooltip: activeConversation.title }}');
+  });
 });

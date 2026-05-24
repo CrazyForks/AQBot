@@ -16,6 +16,7 @@ import { McpServerIcon } from '@/components/shared/McpServerIcon';
 import { NamespaceIcon } from '@/components/shared/NamespaceIcon';
 import { KnowledgeBaseIcon } from '@/components/shared/KnowledgeBaseIcon';
 import { getShortcutBinding, formatShortcutForDisplay, matchesShortcutEvent } from '@/lib/shortcuts';
+import { normalizeAutoConversationTitle } from '@/lib/conversationTitle';
 import type { ShortcutAction } from '@/lib/shortcuts';
 import { VoiceCall } from './VoiceCall';
 import { ConversationSettingsModal } from './ConversationSettingsModal';
@@ -858,7 +859,7 @@ export function InputArea() {
           messageApi.warning(t('chat.noModelsAvailable'));
           return;
         }
-        await createConversation(trimmed.slice(0, 30), model.model_id, provider.id);
+        await createConversation(normalizeAutoConversationTitle(trimmed), model.model_id, provider.id);
       }
 
       let attachments: AttachmentInput[] | undefined;

@@ -1628,6 +1628,7 @@ async fn execute_tool_call(
 }
 
 const DEFAULT_TITLE_PROMPT: &str = "You are a title generator. Based on the conversation below, generate a concise and descriptive title (maximum 30 characters). Reply with the title only, no quotes or extra text.";
+const AUTO_TITLE_CHAR_LIMIT: usize = 30;
 const DEFAULT_TITLE_SUMMARY_MAX_TOKENS: u32 = 1024;
 const RETRY_TITLE_SUMMARY_MAX_TOKENS: u32 = 4096;
 
@@ -1638,14 +1639,39 @@ fn title_summary_max_tokens(settings: &AppSettings) -> u32 {
 }
 
 fn clean_generated_title(content: &str) -> String {
-    content
+    normalize_auto_conversation_title(content)
+}
+
+pub(crate) fn normalize_auto_conversation_title(content: &str) -> String {
+    let cleaned = content
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
         .trim()
         .trim_matches('"')
+        .trim_matches('\'')
+        .trim_matches('“')
+        .trim_matches('”')
         .trim_matches('「')
         .trim_matches('」')
         .trim_matches('《')
         .trim_matches('》')
-        .to_string()
+        .trim()
+        .to_string();
+    truncate_auto_title(&cleaned)
+}
+
+fn truncate_auto_title(text: &str) -> String {
+    let mut chars = text.chars();
+    let truncated = chars
+        .by_ref()
+        .take(AUTO_TITLE_CHAR_LIMIT)
+        .collect::<String>();
+    if chars.next().is_some() {
+        format!("{truncated}...")
+    } else {
+        truncated
+    }
 }
 
 fn truncate_chars(text: &str, limit: usize) -> String {
@@ -2951,11 +2977,7 @@ fn spawn_stream_task(
         // Auto-title: if this is the first user message, set conversation title
         if is_first_message {
             // Set truncated title immediately for instant feedback
-            let fallback_title = if user_content.chars().count() > 30 {
-                format!("{}...", user_content.chars().take(30).collect::<String>())
-            } else {
-                user_content.clone()
-            };
+            let fallback_title = normalize_auto_conversation_title(&user_content);
 
             if let Err(e) = aqbot_core::repo::conversation::update_conversation_title(
                 &db,
@@ -4696,6 +4718,16 @@ mod tests {
             "项目排期讨论"
         );
         assert_eq!(clean_generated_title("\"API 调试记录\""), "API 调试记录");
+    }
+
+    #[test]
+    fn clean_generated_title_truncates_long_auto_titles() {
+        let title = "这是一个用于测试自动会话标题截断逻辑的超长用户问题内容，需要继续追加更多文字";
+
+        assert_eq!(
+            clean_generated_title(title),
+            title.chars().take(30).collect::<String>() + "..."
+        );
     }
 
     #[test]

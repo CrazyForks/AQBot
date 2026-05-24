@@ -5,6 +5,7 @@ import type { InputRef } from 'antd';
 import { Pencil, Share2, FileImage, FileCode, FileText, FileType, Bot, Brain, Lightbulb, Code, Languages, Copy, Check, RotateCcw, User, Trash2, ChevronLeft, ChevronRight, ChevronDown, Scissors, Paperclip, AlertCircle, X, ArrowDown, ArrowUp, ArrowLeftRight, Zap, Sparkles, TextCursorInput, GitBranch, ChartNoAxesColumn, MessageSquare, ArrowUpRight, ArrowDownRight, Coins, Clock, Timer, Download, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { ModelIcon } from '@lobehub/icons';
 import { getConvIcon } from '@/lib/convIcon';
+import { normalizeAutoConversationTitle } from '@/lib/conversationTitle';
 import Bubble from '@ant-design/x/es/bubble';
 import Prompts from '@ant-design/x/es/prompts';
 import Actions from '@ant-design/x/es/actions';
@@ -2723,7 +2724,7 @@ export function ChatView() {
             messageApi.warning(t('chat.noModel'));
             return;
           }
-          await createConversation(text.slice(0, 30), model.model_id, provider.id);
+          await createConversation(normalizeAutoConversationTitle(text), model.model_id, provider.id);
         }
 
         // Route through InputArea's send pipeline so companion models are respected
@@ -3925,6 +3926,19 @@ export function ChatView() {
         .aqbot-streaming-dots span:nth-child(3) {
           animation-delay: 0.3s;
         }
+        .aqbot-chat-title-shell {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          min-width: 0;
+          max-width: min(42vw, 420px);
+          flex: 0 1 auto;
+          cursor: pointer;
+        }
+        .aqbot-chat-title-text {
+          min-width: 0;
+          max-width: 100%;
+        }
       `}</style>
 
       {/* Top Bar */}
@@ -3934,7 +3948,7 @@ export function ChatView() {
             {renderChatSidebarToggle()}
             {renderConvIconForChat(24)}
             {editingTitle ? (
-              <div className="flex items-center gap-1">
+              <div className="aqbot-chat-title-shell" style={{ cursor: 'default' }}>
                 <Input
                   ref={titleInputRef}
                   value={titleDraft}
@@ -3956,16 +3970,21 @@ export function ChatView() {
                 </Tooltip>
               </div>
             ) : (
-              <Typography.Text
-                className="cursor-pointer select-none"
+              <span
+                className="aqbot-chat-title-shell select-none"
                 onClick={handleTitleClick}
               >
-                {activeConversation.title}
+                <Typography.Text
+                  className="aqbot-chat-title-text"
+                  ellipsis={{ tooltip: activeConversation.title }}
+                >
+                  {activeConversation.title}
+                </Typography.Text>
                 {isTitleGenerating
-                  ? <SyncOutlined spin className="ml-1 text-xs opacity-50" />
-                  : <Pencil size={12} className="ml-1 text-xs opacity-50" />
+                  ? <SyncOutlined spin className="text-xs opacity-50" style={{ flexShrink: 0 }} />
+                  : <Pencil size={12} className="text-xs opacity-50" style={{ flexShrink: 0 }} />
                 }
-              </Typography.Text>
+              </span>
             )}
 
             <div className="flex-1" />

@@ -420,4 +420,15 @@ describe('ChatSidebar direct delete shortcut', () => {
     });
   });
 
+  it('wraps long sidebar conversation titles in a truncation target with the full title available', () => {
+    const longTitle = '这是一个非常长的会话标题，用于验证侧边栏不会因为标题过长而撑高或者挤压操作按钮';
+    conversationState.conversations[0].title = longTitle;
+
+    render(<ChatSidebar />);
+
+    const title = screen.getByText(longTitle);
+    expect(title).toHaveClass('aqbot-chat-conversation-title');
+    expect(title).toHaveAttribute('title', longTitle);
+  });
+
 });

@@ -440,11 +440,8 @@ pub async fn agent_query(
 
     // Auto-title: set fallback + async AI title for first message
     if is_first_message {
-        let fallback_title = if prompt.chars().count() > 30 {
-            format!("{}...", prompt.chars().take(30).collect::<String>())
-        } else {
-            prompt.clone()
-        };
+        let fallback_title =
+            crate::commands::conversations::normalize_auto_conversation_title(&prompt);
         if let Err(e) = conversation::update_conversation_title(
             &state.sea_db,
             &conversation_id,

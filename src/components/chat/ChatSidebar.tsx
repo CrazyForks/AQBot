@@ -44,6 +44,15 @@ function getDirectDeleteShortcutLabel(): string {
   return isMac ? '⌘' : 'Ctrl'
 }
 
+function ConversationTitleText({ title, className = '' }: { title: string; className?: string }) {
+  const mergedClassName = ['aqbot-chat-conversation-title', className].filter(Boolean).join(' ')
+  return (
+    <span className={mergedClassName} title={title}>
+      {title}
+    </span>
+  )
+}
+
 function getDateGroup(timestamp: number): string {
   const now = new Date()
   const date = new Date(timestamp * 1000)
@@ -664,22 +673,20 @@ export function ChatSidebar() {
         const childCount = childrenMap.get(conv.id)?.length ?? 0
         const expanded = isExpanded(conv.id)
 
-        let label: React.ReactNode
-        if (conv.is_pinned && !isChild) {
-          label = (
-            <span className="flex items-center gap-1">
-              <span className="truncate">{conv.title}</span>
-              <Pin size={12} style={{ color: token.colorTextQuaternary, flexShrink: 0 }} />
-            </span>
-          )
-        } else {
-          label = conv.title
-        }
+        const pinNode = conv.is_pinned && !isChild
+          ? <Pin size={12} style={{ color: token.colorTextQuaternary, flexShrink: 0 }} />
+          : null
+        let label: React.ReactNode = (
+          <span className="aqbot-chat-conversation-label">
+            <ConversationTitleText title={conv.title} className="flex-1" />
+            {pinNode}
+          </span>
+        )
 
         // Wrap label with expand/collapse toggle for parents with children
         if (childCount > 0) {
           label = (
-            <span className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
+            <span className="aqbot-chat-conversation-label">
               <span
                 onClick={(e) => {
                   e.stopPropagation()
@@ -701,7 +708,8 @@ export function ChatSidebar() {
                   }}
                 />
               </span>
-              <span className="truncate">{typeof label === 'string' ? label : label}</span>
+              <ConversationTitleText title={conv.title} className="flex-1" />
+              {pinNode}
             </span>
           )
         }
@@ -1378,7 +1386,7 @@ export function ChatSidebar() {
                     />
                   )}
                   {buildIcon(conv)}
-                  <span className="flex-1 truncate text-sm">{conv.title}</span>
+                  <ConversationTitleText title={conv.title} className="flex-1 text-sm" />
                   {!archivedMultiSelect && (
                     <div className="flex items-center gap-1">
                       <Tooltip title={t('chat.unarchive')}>
@@ -1463,6 +1471,21 @@ export function ChatSidebar() {
                 .ant-conversations .ant-conversations-group-label {
                   flex: 1;
                   overflow: hidden;
+                }
+                .aqbot-chat-conversation-label {
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  min-width: 0;
+                  width: 100%;
+                  overflow: hidden;
+                }
+                .aqbot-chat-conversation-title {
+                  min-width: 0;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  display: block;
                 }
                 @keyframes spin {
                   from { transform: rotate(0deg); }
