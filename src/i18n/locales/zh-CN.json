@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "正在检索知识库...",
       "error": "知识库检索失败",
+      "empty": "未找到相关知识库内容。",
+      "emptyThreshold": "未找到符合检索阈值的知识库内容，可适当降低检索阈值。",
       "resultsCount": "检索到 {{count}} 条知识",
       "label": "知识库"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "正在检索记忆...",
       "error": "记忆检索失败",
+      "empty": "未找到相关记忆内容。",
+      "emptyThreshold": "未找到符合检索阈值的记忆内容，可适当降低检索阈值。",
       "resultsCount": "检索到 {{count}} 条记忆",
       "label": "记忆"
     },
@@ -768,6 +772,7 @@
       "embeddingDimensions": "嵌入维度",
       "embeddingDimensionsAuto": "自动",
       "retrievalThreshold": "检索阈值",
+      "retrievalThresholdHelp": "最低相似度，值越高越严格；过高可能导致知识库无命中。",
       "retrievalTopK": "检索记录数",
       "rerankModel": "重排模型",
       "rerankModelPlaceholder": "选择重排模型",

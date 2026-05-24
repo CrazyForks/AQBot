@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "Searching knowledge base...",
       "error": "Knowledge base search failed",
+      "empty": "No related knowledge content found.",
+      "emptyThreshold": "No knowledge content matched the retrieval threshold. Try lowering the threshold.",
       "resultsCount": "Retrieved {{count}} knowledge items",
       "label": "Knowledge"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "Searching memory...",
       "error": "Memory search failed",
+      "empty": "No related memory content found.",
+      "emptyThreshold": "No memory content matched the retrieval threshold. Try lowering the threshold.",
       "resultsCount": "Retrieved {{count}} memory items",
       "label": "Memory"
     },
@@ -768,6 +772,7 @@
       "embeddingDimensions": "Embedding Dimensions",
       "embeddingDimensionsAuto": "Auto",
       "retrievalThreshold": "Retrieval Threshold",
+      "retrievalThresholdHelp": "Minimum similarity. Higher values are stricter and may produce no knowledge hits.",
       "retrievalTopK": "Top K Results",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

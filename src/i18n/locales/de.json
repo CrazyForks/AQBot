@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "Wissensdatenbank wird durchsucht…",
       "error": "Wissensdatenbanksuche fehlgeschlagen",
+      "empty": "Keine passenden Wissensinhalte gefunden.",
+      "emptyThreshold": "Keine Wissensinhalte entsprechen der Abrufschwelle. Senken Sie die Schwelle.",
       "resultsCount": "{{count}} Wissenseinträge abgerufen",
       "label": "Wissen"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "Gedächtnis wird durchsucht…",
       "error": "Gedächtnissuche fehlgeschlagen",
+      "empty": "Keine passenden Gedächtnisinhalte gefunden.",
+      "emptyThreshold": "Keine Gedächtnisinhalte entsprechen der Abrufschwelle. Senken Sie die Schwelle.",
       "resultsCount": "{{count}} Gedächtniseinträge abgerufen",
       "label": "Gedächtnis"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "Embedding-Dimensionen",
       "embeddingDimensionsAuto": "Auto",
       "retrievalThreshold": "Abrufschwelle",
+      "retrievalThresholdHelp": "Minimale Ähnlichkeit. Höhere Werte sind strenger und können zu keinen Treffern führen.",
       "retrievalTopK": "Top-K-Ergebnisse",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

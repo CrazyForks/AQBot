@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "جارٍ البحث في قاعدة المعرفة...",
       "error": "فشل البحث في قاعدة المعرفة",
+      "empty": "لم يتم العثور على محتوى معرفي ذي صلة.",
+      "emptyThreshold": "لم يطابق أي محتوى معرفي عتبة الاسترداد. جرّب خفض العتبة.",
       "resultsCount": "تم استرداد {{count}} عنصر معرفي",
       "label": "المعرفة"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "جارٍ البحث في الذاكرة...",
       "error": "فشل البحث في الذاكرة",
+      "empty": "لم يتم العثور على محتوى ذاكرة ذي صلة.",
+      "emptyThreshold": "لم يطابق أي محتوى ذاكرة عتبة الاسترداد. جرّب خفض العتبة.",
       "resultsCount": "تم استرداد {{count}} عنصر من الذاكرة",
       "label": "الذاكرة"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "أبعاد التضمين",
       "embeddingDimensionsAuto": "تلقائي",
       "retrievalThreshold": "عتبة الاسترداد",
+      "retrievalThresholdHelp": "الحد الأدنى للتشابه. القيم الأعلى أكثر صرامة وقد لا تُرجع أي نتائج من قاعدة المعرفة.",
       "retrievalTopK": "أفضل K نتائج",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

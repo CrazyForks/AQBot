@@ -101,6 +101,34 @@ export function MemoryRetrievalNode(props: NodeComponentProps<MemoryRetrievalNod
     );
   }
 
+  if (status === 'empty') {
+    const reason = getAttrValue(node.attrs, 'reason');
+    const messageKey = reason === 'threshold_filtered'
+      ? 'chat.memoryRetrieval.emptyThreshold'
+      : 'chat.memoryRetrieval.empty';
+    const defaultValue = reason === 'threshold_filtered'
+      ? '未找到符合检索阈值的记忆内容，可适当降低检索阈值。'
+      : '未找到相关记忆内容。';
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 12px',
+          marginBottom: 8,
+          borderRadius: 8,
+          backgroundColor: token.colorWarningBg,
+          color: token.colorWarningText,
+          fontSize: 13,
+        }}
+      >
+        <Brain size={16} />
+        <span>{t(messageKey, { defaultValue })}</span>
+      </div>
+    );
+  }
+
   // Done state — no results
   if (totalItems === 0) return null;
 

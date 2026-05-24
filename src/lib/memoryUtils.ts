@@ -21,11 +21,19 @@ export interface RagSourceError {
   message: string;
 }
 
+export interface RagSourceEmptyResult {
+  source_type: 'knowledge' | 'memory';
+  container_id: string;
+  reason: 'no_candidates' | 'threshold_filtered' | string;
+}
+
 export interface RagContextRetrievedEvent {
   conversation_id: string;
   message_id?: string | null;
   sources: MemorySourceResult[];
   errors?: RagSourceError[];
+  empty_results?: RagSourceEmptyResult[];
+  emptyResults?: RagSourceEmptyResult[];
 }
 
 function escapeTagText(value: string): string {
@@ -33,6 +41,10 @@ function escapeTagText(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function escapeTagAttr(value: string): string {
+  return escapeTagText(value).replace(/"/g, '&quot;');
 }
 
 export function formatRagFailureMessage(message?: string): string {
@@ -46,11 +58,16 @@ export function formatRagFailureMessage(message?: string): string {
  * Build a `<knowledge-retrieval>` custom tag for markstream-react rendering.
  */
 export function buildKnowledgeTag(
-  status: 'searching' | 'done' | 'error',
+  status: 'searching' | 'done' | 'error' | 'empty',
   sources?: MemorySourceResult[] | string,
 ): string {
   if (status === 'searching') {
     return '<knowledge-retrieval status="searching" data-aqbot="1"></knowledge-retrieval>';
+  }
+  if (status === 'empty') {
+    const reason = typeof sources === 'string' ? sources : '';
+    const reasonAttr = reason ? ` reason="${escapeTagAttr(reason)}"` : '';
+    return `<knowledge-retrieval status="empty" data-aqbot="1"${reasonAttr}></knowledge-retrieval>`;
   }
   if (status === 'error') {
     const message = formatRagFailureMessage(typeof sources === 'string' ? sources : '');
@@ -64,11 +81,16 @@ export function buildKnowledgeTag(
  * Build a `<memory-retrieval>` custom tag for markstream-react rendering.
  */
 export function buildMemoryTag(
-  status: 'searching' | 'done' | 'error',
+  status: 'searching' | 'done' | 'error' | 'empty',
   sources?: MemorySourceResult[] | string,
 ): string {
   if (status === 'searching') {
     return '<memory-retrieval status="searching" data-aqbot="1"></memory-retrieval>';
+  }
+  if (status === 'empty') {
+    const reason = typeof sources === 'string' ? sources : '';
+    const reasonAttr = reason ? ` reason="${escapeTagAttr(reason)}"` : '';
+    return `<memory-retrieval status="empty" data-aqbot="1"${reasonAttr}></memory-retrieval>`;
   }
   if (status === 'error') {
     const message = formatRagFailureMessage(typeof sources === 'string' ? sources : '');

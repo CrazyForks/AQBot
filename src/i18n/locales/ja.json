@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "ナレッジベースを検索中...",
       "error": "ナレッジベース検索に失敗しました",
+      "empty": "関連するナレッジは見つかりませんでした。",
+      "emptyThreshold": "取得閾値に一致するナレッジは見つかりませんでした。閾値を下げてみてください。",
       "resultsCount": "{{count}} 件のナレッジを取得しました",
       "label": "ナレッジ"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "メモリを検索中...",
       "error": "メモリ検索に失敗しました",
+      "empty": "関連するメモリは見つかりませんでした。",
+      "emptyThreshold": "取得閾値に一致するメモリは見つかりませんでした。閾値を下げてみてください。",
       "resultsCount": "{{count}} 件のメモリを取得しました",
       "label": "メモリ"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "埋め込み次元",
       "embeddingDimensionsAuto": "自動",
       "retrievalThreshold": "取得閾値",
+      "retrievalThresholdHelp": "最小類似度です。値が高いほど厳しくなり、ナレッジがヒットしない場合があります。",
       "retrievalTopK": "取得上位K件",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

@@ -1141,6 +1141,16 @@ pub struct RagSourceError {
     pub message: String,
 }
 
+/// Retrieval completed but returned no usable items for a single RAG source.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RagSourceEmptyResult {
+    /// "knowledge" or "memory"
+    pub source_type: String,
+    pub container_id: String,
+    /// "no_candidates" or "threshold_filtered"
+    pub reason: String,
+}
+
 /// Combined results of RAG context collection.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RagContextResult {
@@ -1151,6 +1161,9 @@ pub struct RagContextResult {
     /// Structured failures for frontend display.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<RagSourceError>,
+    /// Sources that completed without injectable context.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub empty_results: Vec<RagSourceEmptyResult>,
 }
 
 /// Tauri event emitted after RAG context retrieval completes.
@@ -1161,6 +1174,8 @@ pub struct RagContextRetrievedEvent {
     pub sources: Vec<RagSourceResult>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<RagSourceError>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub empty_results: Vec<RagSourceEmptyResult>,
 }
 
 // === Embedding Types ===

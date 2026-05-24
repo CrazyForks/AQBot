@@ -461,22 +461,29 @@ function mergeIncomingDisplayChunk(currentContent: string, incomingContent: stri
 function buildRagDisplayTagFromSources(
   sources: RagContextRetrievedEvent['sources'],
   errors: RagContextRetrievedEvent['errors'] = [],
+  emptyResults: RagContextRetrievedEvent['empty_results'] = [],
 ): string {
   const knowledgeSources = sources.filter(s => s.source_type === 'knowledge');
   const memorySources = sources.filter(s => s.source_type === 'memory');
   const knowledgeErrors = errors.filter(e => e.source_type === 'knowledge');
   const memoryErrors = errors.filter(e => e.source_type === 'memory');
+  const knowledgeEmpty = emptyResults.find(e => e.source_type === 'knowledge');
+  const memoryEmpty = emptyResults.find(e => e.source_type === 'memory');
   return [
     knowledgeSources.length > 0
       ? buildKnowledgeTag('done', knowledgeSources)
       : knowledgeErrors.length > 0
         ? buildKnowledgeTag('error', knowledgeErrors[0].message)
-        : '',
+        : knowledgeEmpty
+          ? buildKnowledgeTag('empty', knowledgeEmpty.reason)
+          : '',
     memorySources.length > 0
       ? buildMemoryTag('done', memorySources)
       : memoryErrors.length > 0
         ? buildMemoryTag('error', memoryErrors[0].message)
-        : '',
+        : memoryEmpty
+          ? buildMemoryTag('empty', memoryEmpty.reason)
+          : '',
   ].join('');
 }
 
@@ -3349,8 +3356,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     const ragUnsub = await listen<RagContextRetrievedEvent>('rag-context-retrieved', (event) => {
       if (_listenerGen !== gen) return;
       if (!get().streaming) return;
-      const { conversation_id, message_id, sources, errors } = event.payload;
-      const displayTag = buildRagDisplayTagFromSources(sources, errors);
+      const { conversation_id, message_id, sources, errors, empty_results, emptyResults } = event.payload;
+      const displayTag = buildRagDisplayTagFromSources(
+        sources,
+        errors,
+        empty_results ?? emptyResults ?? [],
+      );
 
       // Update UI immediately
       if (get().activeConversationId === conversation_id) {

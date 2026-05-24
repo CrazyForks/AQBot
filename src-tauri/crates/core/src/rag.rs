@@ -8,7 +8,9 @@ use async_trait::async_trait;
 use sea_orm::DatabaseConnection;
 
 use crate::error::{AQBotError, Result};
-use crate::types::{RagContextResult, RagRetrievedItem, RagSourceError, RagSourceResult};
+use crate::types::{
+    RagContextResult, RagRetrievedItem, RagSourceEmptyResult, RagSourceError, RagSourceResult,
+};
 use crate::vector_store::{EmbeddingRecord, VectorSearchResult, VectorStore};
 use crate::{document_parser, text_chunker};
 
@@ -269,6 +271,30 @@ pub fn passes_retrieval_threshold(distance: f32, threshold: f32) -> bool {
     }
 }
 
+fn filter_results_by_threshold(
+    raw_results: Vec<VectorSearchResult>,
+    threshold: f32,
+) -> (Vec<VectorSearchResult>, Option<&'static str>) {
+    if raw_results.is_empty() {
+        return (raw_results, Some("no_candidates"));
+    }
+
+    if threshold <= 0.0 {
+        return (raw_results, None);
+    }
+
+    let results: Vec<_> = raw_results
+        .into_iter()
+        .filter(|r| passes_retrieval_threshold(r.score, threshold))
+        .collect();
+
+    if results.is_empty() {
+        (results, Some("threshold_filtered"))
+    } else {
+        (results, None)
+    }
+}
+
 // ── Context collection ───────────────────────────────────────────────────────
 
 /// A typed RAG source reference for context collection.
@@ -289,6 +315,21 @@ impl RAGSourceRef {
         match self.source_type {
             RAGSourceType::Knowledge => Box::new(KnowledgeRAG),
             RAGSourceType::Memory => Box::new(MemoryRAG),
+        }
+    }
+
+    fn source_type_str(&self) -> &'static str {
+        match self.source_type {
+            RAGSourceType::Knowledge => "knowledge",
+            RAGSourceType::Memory => "memory",
+        }
+    }
+
+    fn empty_result(&self, reason: &str) -> RagSourceEmptyResult {
+        RagSourceEmptyResult {
+            source_type: self.source_type_str().to_string(),
+            container_id: self.container_id.clone(),
+            reason: reason.to_string(),
         }
     }
 }
@@ -327,6 +368,7 @@ pub async fn collect_rag_context(
     let mut context_parts = Vec::new();
     let mut source_results = Vec::new();
     let mut errors = Vec::new();
+    let mut empty_results = Vec::new();
 
     for src_ref in &sources {
         let source = src_ref.source();
@@ -404,17 +446,17 @@ pub async fn collect_rag_context(
         .await;
 
         match result {
-            Ok(raw_results) if !raw_results.is_empty() => {
-                // Apply distance threshold filter
-                let mut results: Vec<_> = if threshold > 0.0 {
-                    raw_results
-                        .into_iter()
-                        .filter(|r| passes_retrieval_threshold(r.score, threshold))
-                        .collect()
-                } else {
-                    raw_results
-                };
-                if results.is_empty() {
+            Ok(raw_results) => {
+                let (mut results, empty_reason) =
+                    filter_results_by_threshold(raw_results, threshold);
+                if let Some(reason) = empty_reason {
+                    tracing::warn!(
+                        "RAG search returned no usable results for {} {}: {}",
+                        source.collection_prefix(),
+                        src_ref.container_id,
+                        reason,
+                    );
+                    empty_results.push(src_ref.empty_result(reason));
                     continue;
                 }
 
@@ -441,12 +483,8 @@ pub async fn collect_rag_context(
                                 src_ref.container_id,
                                 e
                             );
-                            let source_type_str = match src_ref.source_type {
-                                RAGSourceType::Knowledge => "knowledge",
-                                RAGSourceType::Memory => "memory",
-                            };
                             errors.push(RagSourceError {
-                                source_type: source_type_str.to_string(),
+                                source_type: src_ref.source_type_str().to_string(),
                                 container_id: src_ref.container_id.clone(),
                                 message: format_rag_failure_message(format!("重排序失败：{e}")),
                             });
@@ -476,22 +514,11 @@ pub async fn collect_rag_context(
                     snippets.join("\n---\n")
                 ));
 
-                let source_type_str = match src_ref.source_type {
-                    RAGSourceType::Knowledge => "knowledge",
-                    RAGSourceType::Memory => "memory",
-                };
                 source_results.push(RagSourceResult {
-                    source_type: source_type_str.to_string(),
+                    source_type: src_ref.source_type_str().to_string(),
                     container_id: src_ref.container_id.clone(),
                     items,
                 });
-            }
-            Ok(_) => {
-                tracing::warn!(
-                    "RAG search returned no results for {} {}",
-                    source.collection_prefix(),
-                    src_ref.container_id,
-                );
             }
             Err(e) => {
                 tracing::warn!(
@@ -500,12 +527,8 @@ pub async fn collect_rag_context(
                     src_ref.container_id,
                     e
                 );
-                let source_type_str = match src_ref.source_type {
-                    RAGSourceType::Knowledge => "knowledge",
-                    RAGSourceType::Memory => "memory",
-                };
                 errors.push(RagSourceError {
-                    source_type: source_type_str.to_string(),
+                    source_type: src_ref.source_type_str().to_string(),
                     container_id: src_ref.container_id.clone(),
                     message: format_rag_failure_message(format!("向量检索失败：{e}")),
                 });
@@ -546,6 +569,7 @@ pub async fn collect_rag_context(
         context_parts,
         source_results,
         errors,
+        empty_results,
     }
 }
 
@@ -582,6 +606,18 @@ pub trait AsyncRerankFn: Send + Sync + Clone {
 mod tests {
     use super::*;
 
+    fn vector_result(id: &str, score: f32) -> VectorSearchResult {
+        VectorSearchResult {
+            id: id.to_string(),
+            document_id: format!("doc-{id}"),
+            chunk_index: 0,
+            content: format!("content {id}"),
+            score,
+            rerank_score: None,
+            has_embedding: true,
+        }
+    }
+
     #[test]
     fn retrieval_threshold_uses_displayed_similarity_for_zero_to_one_values() {
         assert!(passes_retrieval_threshold(1.0, 0.5));
@@ -593,5 +629,22 @@ mod tests {
     fn retrieval_threshold_keeps_distance_compatibility_for_values_above_one() {
         assert!(passes_retrieval_threshold(1.5, 2.0));
         assert!(!passes_retrieval_threshold(2.5, 2.0));
+    }
+
+    #[test]
+    fn retrieval_empty_reason_marks_threshold_filtered_candidates() {
+        let (results, empty_reason) =
+            filter_results_by_threshold(vec![vector_result("a", 4.0)], 0.49);
+
+        assert!(results.is_empty());
+        assert_eq!(empty_reason, Some("threshold_filtered"));
+    }
+
+    #[test]
+    fn retrieval_empty_reason_marks_no_candidates() {
+        let (results, empty_reason) = filter_results_by_threshold(Vec::new(), 0.1);
+
+        assert!(results.is_empty());
+        assert_eq!(empty_reason, Some("no_candidates"));
     }
 }

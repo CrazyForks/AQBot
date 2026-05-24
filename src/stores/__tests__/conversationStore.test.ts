@@ -1301,6 +1301,57 @@ describe('conversationStore pagination', () => {
     expect(displayById['temp-assistant-1']).toContain('检索失败：Embedding 服务无响应');
   });
 
+  it('keeps RAG display when retrieval returns no results after threshold filtering', async () => {
+    const listeners = new Map<string, (event: unknown) => void>();
+    listenMock.mockImplementation(async (eventName: string, handler: (event: unknown) => void) => {
+      listeners.set(eventName, handler);
+      return () => {};
+    });
+    const { useConversationStore } = await import('../conversationStore');
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      streaming: true,
+      streamingMessageId: 'temp-assistant-1',
+      streamingConversationId: 'conv-1',
+      ragDisplayByMessageId: {
+        'temp-assistant-1': '<knowledge-retrieval status="searching" data-aqbot="1"></knowledge-retrieval>',
+      },
+      messages: [
+        {
+          ...makeMessage(2),
+          id: 'temp-assistant-1',
+          conversation_id: 'conv-1',
+          role: 'assistant',
+          content: '',
+          status: 'partial',
+        },
+      ],
+    });
+
+    await useConversationStore.getState().startStreamListening();
+    listeners.get('rag-context-retrieved')?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-1',
+        sources: [],
+        errors: [],
+        empty_results: [
+          {
+            source_type: 'knowledge',
+            container_id: 'kb-1',
+            reason: 'threshold_filtered',
+          },
+        ],
+      },
+    });
+
+    const displayById = useConversationStore.getState().ragDisplayByMessageId;
+    expect(displayById['temp-assistant-1']).toContain(
+      '<knowledge-retrieval status="empty" data-aqbot="1" reason="threshold_filtered">',
+    );
+  });
+
   it('keeps loading until the newest active conversation request resolves', async () => {
     const pageA = deferred<MessagePage>();
     const pageB = deferred<MessagePage>();

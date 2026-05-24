@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "지식 베이스 검색 중...",
       "error": "지식 베이스 검색에 실패했습니다",
+      "empty": "관련 지식 내용을 찾지 못했습니다.",
+      "emptyThreshold": "검색 임계값에 맞는 지식 내용을 찾지 못했습니다. 임계값을 낮춰 보세요.",
       "resultsCount": "{{count}}개의 지식 항목을 검색했습니다",
       "label": "지식"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "메모리 검색 중...",
       "error": "메모리 검색에 실패했습니다",
+      "empty": "관련 메모리 내용을 찾지 못했습니다.",
+      "emptyThreshold": "검색 임계값에 맞는 메모리 내용을 찾지 못했습니다. 임계값을 낮춰 보세요.",
       "resultsCount": "{{count}}개의 메모리 항목을 검색했습니다",
       "label": "메모리"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "임베딩 차원",
       "embeddingDimensionsAuto": "자동",
       "retrievalThreshold": "검색 임계값",
+      "retrievalThresholdHelp": "최소 유사도입니다. 값이 높을수록 더 엄격하며 지식 결과가 없을 수 있습니다.",
       "retrievalTopK": "상위 K개 결과",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

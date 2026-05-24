@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "Поиск в базе знаний...",
       "error": "Ошибка поиска в базе знаний",
+      "empty": "Связанное содержимое базы знаний не найдено.",
+      "emptyThreshold": "Содержимое базы знаний не соответствует порогу поиска. Попробуйте снизить порог.",
       "resultsCount": "Найдено {{count}} элементов знаний",
       "label": "Знания"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "Поиск в памяти...",
       "error": "Ошибка поиска в памяти",
+      "empty": "Связанное содержимое памяти не найдено.",
+      "emptyThreshold": "Содержимое памяти не соответствует порогу поиска. Попробуйте снизить порог.",
       "resultsCount": "Найдено {{count}} элементов памяти",
       "label": "Память"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "Размерность эмбеддинга",
       "embeddingDimensionsAuto": "Авто",
       "retrievalThreshold": "Порог поиска",
+      "retrievalThresholdHelp": "Минимальная схожесть. Чем выше значение, тем строже фильтр; результатов может не быть.",
       "retrievalTopK": "Top-K результатов",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

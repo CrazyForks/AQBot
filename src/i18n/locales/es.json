@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "Buscando en la base de conocimientos...",
       "error": "Error en la búsqueda de la base de conocimientos",
+      "empty": "No se encontró contenido de conocimiento relacionado.",
+      "emptyThreshold": "Ningún contenido de conocimiento alcanzó el umbral de recuperación. Pruebe a reducirlo.",
       "resultsCount": "Se recuperaron {{count}} elementos de conocimiento",
       "label": "Conocimiento"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "Buscando en la memoria...",
       "error": "Error en la búsqueda de memoria",
+      "empty": "No se encontró contenido de memoria relacionado.",
+      "emptyThreshold": "Ningún contenido de memoria alcanzó el umbral de recuperación. Pruebe a reducirlo.",
       "resultsCount": "Se recuperaron {{count}} elementos de memoria",
       "label": "Memoria"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "Dimensiones de incrustación",
       "embeddingDimensionsAuto": "Automático",
       "retrievalThreshold": "Umbral de recuperación",
+      "retrievalThresholdHelp": "Similitud mínima. Los valores más altos son más estrictos y pueden no devolver resultados.",
       "retrievalTopK": "Top K resultados",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",

@@ -782,16 +782,23 @@ function KnowledgeBaseDetail({
             />
           </div>
           <Divider style={{ margin: 0 }} />
-          <div className="flex items-center justify-between">
-            <span>{t('settings.knowledge.retrievalThreshold')}</span>
-            <InputNumber
-              value={settingsForm.retrievalThreshold}
-              onChange={(val) => setSettingsForm(s => ({ ...s, retrievalThreshold: val ?? 0.1 }))}
-              min={0}
-              max={2}
-              step={0.01}
-              style={{ width: 280 }}
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <span>{t('settings.knowledge.retrievalThreshold')}</span>
+              <InputNumber
+                value={settingsForm.retrievalThreshold}
+                onChange={(val) => setSettingsForm(s => ({ ...s, retrievalThreshold: val ?? 0.1 }))}
+                min={0}
+                max={2}
+                step={0.01}
+                style={{ width: 280 }}
+              />
+            </div>
+            <Typography.Text type="secondary" style={{ alignSelf: 'flex-end', width: 280, fontSize: 12 }}>
+              {t('settings.knowledge.retrievalThresholdHelp', {
+                defaultValue: '最低相似度，值越高越严格；过高可能导致知识库无命中。',
+              })}
+            </Typography.Text>
           </div>
           <Divider style={{ margin: 0 }} />
           <div className="flex items-center justify-between">

@@ -193,6 +193,8 @@
     "knowledgeRetrieval": {
       "searching": "ज्ञान आधार में खोज रहे हैं...",
       "error": "ज्ञान आधार खोज विफल",
+      "empty": "संबंधित ज्ञान सामग्री नहीं मिली।",
+      "emptyThreshold": "कोई ज्ञान सामग्री पुनर्प्राप्ति सीमा से मेल नहीं खाई। सीमा घटाकर देखें।",
       "resultsCount": "{{count}} ज्ञान आइटम प्राप्त",
       "label": "ज्ञान आधार"
     },
@@ -203,6 +205,8 @@
     "memoryRetrieval": {
       "searching": "स्मृति में खोज रहे हैं...",
       "error": "स्मृति खोज विफल",
+      "empty": "संबंधित स्मृति सामग्री नहीं मिली।",
+      "emptyThreshold": "कोई स्मृति सामग्री पुनर्प्राप्ति सीमा से मेल नहीं खाई। सीमा घटाकर देखें।",
       "resultsCount": "{{count}} स्मृति आइटम प्राप्त",
       "label": "स्मृति"
     },
@@ -736,6 +740,7 @@
       "embeddingDimensions": "एम्बेडिंग आयाम",
       "embeddingDimensionsAuto": "स्वतः",
       "retrievalThreshold": "पुनर्प्राप्ति सीमा",
+      "retrievalThresholdHelp": "न्यूनतम समानता। अधिक मान अधिक सख्त होते हैं और कोई ज्ञान परिणाम नहीं दे सकते।",
       "retrievalTopK": "शीर्ष K परिणाम",
       "rerankModel": "Rerank model",
       "rerankModelPlaceholder": "Select rerank model",
