@@ -23,6 +23,8 @@
     "send": "Send",
     "welcome": "Start a New Conversation",
     "aiGenerateTitle": "AI Generate Title",
+    "generateTitle": "Generate Title",
+    "generatingTitle": "Generating title",
     "welcomeSubtitle": "Choose a model and begin your AI journey",
     "greetingMorning": "Good morning, what would you like to chat about?",
     "greetingNoon": "Good afternoon, what would you like to chat about?",

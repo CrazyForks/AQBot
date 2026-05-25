@@ -23,6 +23,8 @@
     "send": "Senden",
     "welcome": "Neues Gespräch starten",
     "aiGenerateTitle": "KI-Titel generieren",
+    "generateTitle": "Titel generieren",
+    "generatingTitle": "Titel wird generiert",
     "welcomeSubtitle": "Wählen Sie ein Modell und beginnen Sie Ihre KI-Reise",
     "greetingMorning": "Guten Morgen, worüber möchten Sie sprechen?",
     "greetingNoon": "Guten Tag, worüber möchten Sie sprechen?",

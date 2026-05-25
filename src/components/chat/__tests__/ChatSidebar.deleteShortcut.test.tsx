@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   fetchArchivedConversations: vi.fn(),
   batchDelete: vi.fn(),
   batchArchive: vi.fn(),
+  regenerateTitle: vi.fn(),
   saveSettings: vi.fn(),
   fetchCategories: vi.fn(),
   createCategory: vi.fn(),
@@ -51,6 +52,8 @@ const conversationState: any = {
   batchDelete: mocks.batchDelete,
   batchArchive: mocks.batchArchive,
   streamingConversationId: null,
+  titleGeneratingConversationId: null,
+  regenerateTitle: mocks.regenerateTitle,
 };
 
 const providerState = {
@@ -108,7 +111,14 @@ vi.mock('react-i18next', () => ({
       'chat.thisWeek': '本周',
       'chat.thisMonth': '本月',
       'chat.earlier': '更早',
+      'chat.pin': '置顶',
+      'chat.unpin': '取消置顶',
       'chat.pinned': '已置顶',
+      'chat.archive': '归档',
+      'chat.rename': '重命名',
+      'chat.generateTitle': '生成标题',
+      'chat.generatingTitle': '正在生成标题',
+      'chat.export': '导出',
     }[key] ?? key),
   }),
 }));
@@ -141,6 +151,7 @@ vi.mock('antd', () => ({
           key={item.key}
           type="button"
           aria-label={typeof item.label === 'string' ? item.label : undefined}
+          disabled={item.disabled}
           onClick={() => menu.onClick?.({ key: item.key, domEvent: { stopPropagation: vi.fn() } })}
         >
           {item.icon}
@@ -276,7 +287,9 @@ describe('ChatSidebar direct delete shortcut', () => {
       },
     ];
     conversationState.activeConversationId = 'conv-1';
+    conversationState.titleGeneratingConversationId = null;
     categoryState.categories = [];
+    mocks.regenerateTitle.mockResolvedValue(undefined);
     mocks.createConversation.mockResolvedValue({
       id: 'conv-new',
       title: '新建对话',
@@ -429,6 +442,65 @@ describe('ChatSidebar direct delete shortcut', () => {
     const title = screen.getByText(longTitle);
     expect(title).toHaveClass('aqbot-chat-conversation-title');
     expect(title).toHaveAttribute('title', longTitle);
+  });
+
+  it('shows an inline loading status on the conversation row while generating its title', () => {
+    conversationState.titleGeneratingConversationId = 'conv-1';
+
+    render(<ChatSidebar />);
+
+    const status = screen.getByRole('status', { name: '正在生成标题' });
+    expect(status).toHaveClass('aqbot-chat-conversation-title-generating');
+  });
+
+  it('keeps long title truncation separate from the title generation loading indicator', () => {
+    const longTitle = '这是一个非常长的会话标题，用于验证侧边栏不会因为标题过长而撑高或者挤压操作按钮';
+    conversationState.conversations[0].title = longTitle;
+    conversationState.titleGeneratingConversationId = 'conv-1';
+
+    render(<ChatSidebar />);
+
+    const title = screen.getByText(longTitle);
+    expect(title).toHaveClass('aqbot-chat-conversation-title');
+    expect(title).toHaveAttribute('title', longTitle);
+    expect(title).not.toHaveTextContent('正在生成标题');
+    expect(screen.getByRole('status', { name: '正在生成标题' })).toBeInTheDocument();
+  });
+
+  it('adds generate title after rename in the right-click menu and calls the title regeneration action', async () => {
+    render(<ChatSidebar />);
+
+    fireEvent.contextMenu(screen.getByText('快捷删除测试'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '生成标题' })).toBeInTheDocument();
+    });
+
+    const menuLabels = screen
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? button.textContent)
+      .filter(Boolean);
+    expect(menuLabels.indexOf('生成标题')).toBeGreaterThan(menuLabels.indexOf('重命名'));
+    expect(menuLabels.indexOf('生成标题')).toBeLessThan(menuLabels.indexOf('导出'));
+
+    fireEvent.click(screen.getByRole('button', { name: '生成标题' }));
+
+    expect(mocks.regenerateTitle).toHaveBeenCalledWith('conv-1');
+  });
+
+  it('disables generate title while the conversation title is already generating', async () => {
+    conversationState.titleGeneratingConversationId = 'conv-1';
+
+    render(<ChatSidebar />);
+
+    fireEvent.contextMenu(screen.getByText('快捷删除测试'));
+
+    const generateTitleButton = await screen.findByRole('button', { name: '生成标题' });
+    expect(generateTitleButton).toBeDisabled();
+
+    fireEvent.click(generateTitleButton);
+
+    expect(mocks.regenerateTitle).not.toHaveBeenCalled();
   });
 
 });

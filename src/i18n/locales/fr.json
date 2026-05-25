@@ -23,6 +23,8 @@
     "send": "Envoyer",
     "welcome": "Démarrer une nouvelle conversation",
     "aiGenerateTitle": "Générer le titre avec l'IA",
+    "generateTitle": "Générer le titre",
+    "generatingTitle": "Génération du titre",
     "welcomeSubtitle": "Choisissez un modèle et commencez votre aventure IA",
     "greetingMorning": "Bonjour, de quoi souhaitez-vous discuter ?",
     "greetingNoon": "Bon après-midi, de quoi souhaitez-vous discuter ?",

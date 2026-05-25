@@ -23,6 +23,8 @@
     "send": "전송",
     "welcome": "새 대화 시작",
     "aiGenerateTitle": "AI 제목 생성",
+    "generateTitle": "제목 생성",
+    "generatingTitle": "제목 생성 중",
     "welcomeSubtitle": "모델을 선택하고 AI 여정을 시작하세요",
     "greetingMorning": "좋은 아침이에요. 무슨 이야기를 나눌까요?",
     "greetingNoon": "좋은 점심이에요. 무슨 이야기를 나눌까요?",

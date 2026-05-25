@@ -23,6 +23,8 @@
     "send": "傳送",
     "welcome": "開始新的對話",
     "aiGenerateTitle": "AI 生成標題",
+    "generateTitle": "生成標題",
+    "generatingTitle": "正在生成標題",
     "welcomeSubtitle": "選擇一個模型，開始你的 AI 對話之旅",
     "greetingMorning": "早上好，今天想聊聊什麼呢？",
     "greetingNoon": "中午好，今天想聊聊什麼呢？",

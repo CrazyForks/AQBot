@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { Button, Input, App, theme, Tooltip, Avatar, Checkbox, Dropdown, Empty } from 'antd'
-import { MessageSquarePlus, Search, Archive, ListTodo, Trash2, Pencil, Share, Pin, PinOff, Loader, X, Undo2, ArrowLeft, FileImage, FileCode, FileType, FileText, FolderPlus, FolderOpen, GripVertical, ChevronRight, MessageSquareText } from 'lucide-react'
+import { MessageSquarePlus, Search, Archive, ListTodo, Trash2, Pencil, Share, Pin, PinOff, Loader, X, Undo2, ArrowLeft, FileImage, FileCode, FileType, FileText, FolderPlus, FolderOpen, GripVertical, ChevronRight, MessageSquareText, Sparkles } from 'lucide-react'
 import { ModelIcon } from '@lobehub/icons'
 import { getConvIcon } from '@/lib/convIcon'
 import { exportAsMarkdown, exportAsText, exportAsPNG, exportAsJSON } from '@/lib/exportChat'
@@ -168,6 +168,8 @@ export function ChatSidebar() {
   const batchDelete = useConversationStore((s) => s.batchDelete)
   const batchArchive = useConversationStore((s) => s.batchArchive)
   const streamingConversationId = useConversationStore((s) => s.streamingConversationId)
+  const titleGeneratingConversationId = useConversationStore((s) => s.titleGeneratingConversationId)
+  const regenerateTitle = useConversationStore((s) => s.regenerateTitle)
 
   const providers = useProviderStore((s) => s.providers)
   const settings = useSettingsStore((s) => s.settings)
@@ -672,47 +674,63 @@ export function ChatSidebar() {
         const icon = buildIcon(conv)
         const childCount = childrenMap.get(conv.id)?.length ?? 0
         const expanded = isExpanded(conv.id)
+        const isGeneratingTitle = titleGeneratingConversationId === conv.id
 
         const pinNode = conv.is_pinned && !isChild
           ? <Pin size={12} style={{ color: token.colorTextQuaternary, flexShrink: 0 }} />
           : null
-        let label: React.ReactNode = (
+        const generatingTitleNode = isGeneratingTitle ? (
+          <Tooltip title={t('chat.generatingTitle')}>
+            <span
+              className="aqbot-chat-conversation-title-generating"
+              role="status"
+              aria-label={t('chat.generatingTitle')}
+              style={{
+                color: token.colorPrimary,
+                width: 14,
+                height: 14,
+                minWidth: 14,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Loader size={12} aria-hidden="true" style={{ animation: 'spin 1s linear infinite' }} />
+            </span>
+          </Tooltip>
+        ) : null
+        const expandToggleNode = childCount > 0 ? (
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpandedParentIds((prev) => {
+                const next = new Set(prev)
+                if (next.has(conv.id)) next.delete(conv.id)
+                else next.add(conv.id)
+                return next
+              })
+            }}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+          >
+            <ChevronRight
+              size={12}
+              style={{
+                color: token.colorTextQuaternary,
+                transition: 'transform 0.2s',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+              }}
+            />
+          </span>
+        ) : null
+        const label: React.ReactNode = (
           <span className="aqbot-chat-conversation-label">
+            {expandToggleNode}
             <ConversationTitleText title={conv.title} className="flex-1" />
+            {generatingTitleNode}
             {pinNode}
           </span>
         )
-
-        // Wrap label with expand/collapse toggle for parents with children
-        if (childCount > 0) {
-          label = (
-            <span className="aqbot-chat-conversation-label">
-              <span
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setExpandedParentIds((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(conv.id)) next.delete(conv.id)
-                    else next.add(conv.id)
-                    return next
-                  })
-                }}
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-              >
-                <ChevronRight
-                  size={12}
-                  style={{
-                    color: token.colorTextQuaternary,
-                    transition: 'transform 0.2s',
-                    transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                  }}
-                />
-              </span>
-              <ConversationTitleText title={conv.title} className="flex-1" />
-              {pinNode}
-            </span>
-          )
-        }
 
         if (multiSelectMode) {
           return {
@@ -781,7 +799,7 @@ export function ChatSidebar() {
 
       return items
     },
-    [filteredConversations, multiSelectMode, selectedIds, buildIcon, toggleSelect, token.colorTextQuaternary, categories, t, expandedParentIds],
+    [filteredConversations, multiSelectMode, selectedIds, buildIcon, toggleSelect, token.colorTextQuaternary, token.colorPrimary, categories, t, expandedParentIds, titleGeneratingConversationId],
   )
 
   const groupLabels: Record<string, string> = useMemo(
@@ -976,6 +994,14 @@ export function ChatSidebar() {
     [conversations, updateConversation, t, modal],
   )
 
+  const handleGenerateTitle = useCallback(
+    (conversationId: string) => {
+      if (titleGeneratingConversationId === conversationId) return
+      void regenerateTitle(conversationId)
+    },
+    [regenerateTitle, titleGeneratingConversationId],
+  )
+
   const buildExportChildren = useCallback(
     (convId: string, title: string) => [
       {
@@ -1051,6 +1077,7 @@ export function ChatSidebar() {
       if (multiSelectMode) return { items: [] }
       const conv = conversations.find((c) => c.id === String(item.key))
       const isPinned = conv?.is_pinned ?? false
+      const isGeneratingTitle = titleGeneratingConversationId === String(item.key)
       const categoryItems: any[] = []
       if (categories.length > 0) {
         const moveChildren = moveToCategoryMenuItems.filter(
@@ -1103,6 +1130,14 @@ export function ChatSidebar() {
           ...categoryItems,
           { key: 'rename', label: t('chat.rename'), icon: <Pencil size={14} /> },
           {
+            key: 'generate-title',
+            label: t('chat.generateTitle'),
+            icon: isGeneratingTitle
+              ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Sparkles size={14} />,
+            disabled: isGeneratingTitle,
+          },
+          {
             key: 'export',
             label: (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Share size={14} />{t('chat.export')}</span>),
             children: buildExportChildren(String(item.key), conv?.title ?? (typeof item.label === 'string' ? item.label : '')),
@@ -1129,6 +1164,9 @@ export function ChatSidebar() {
             case 'rename':
               handleRename(item)
               break
+            case 'generate-title':
+              handleGenerateTitle(String(item.key))
+              break
             case 'delete':
               handleDelete(item, menuInfo.domEvent)
               break
@@ -1136,7 +1174,7 @@ export function ChatSidebar() {
         },
       }
     },
-    [t, conversations, multiSelectMode, handleRename, handleDelete, togglePin, toggleArchive, buildExportChildren, categories, moveToCategoryMenuItems, updateConversation, directDeleteMode, directDeleteHint],
+    [t, conversations, multiSelectMode, handleRename, handleGenerateTitle, handleDelete, togglePin, toggleArchive, buildExportChildren, categories, moveToCategoryMenuItems, updateConversation, directDeleteMode, directDeleteHint, titleGeneratingConversationId],
   )
 
   const handleConversationClick = useCallback((key: string) => {
@@ -1152,6 +1190,7 @@ export function ChatSidebar() {
     const conv = conversations.find((c) => c.id === rightClickedConvId)
     if (!conv) return { items: [] as any[] }
     const isPinned = conv.is_pinned ?? false
+    const isGeneratingTitle = titleGeneratingConversationId === conv.id
     const categoryItems: any[] = []
     if (categories.length > 0) {
       const moveChildren = moveToCategoryMenuItems.filter(
@@ -1178,6 +1217,14 @@ export function ChatSidebar() {
         ...categoryItems,
         { key: 'rename', label: t('chat.rename'), icon: <Pencil size={14} /> },
         {
+          key: 'generate-title',
+          label: t('chat.generateTitle'),
+          icon: isGeneratingTitle
+            ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+            : <Sparkles size={14} />,
+          disabled: isGeneratingTitle,
+        },
+        {
           key: 'export',
           label: (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Share size={14} />{t('chat.export')}</span>),
           children: buildExportChildren(conv.id, conv.title),
@@ -1199,11 +1246,12 @@ export function ChatSidebar() {
           case 'pin': togglePin(conv.id); break
           case 'archive': toggleArchive(conv.id); break
           case 'rename': handleRename(item); break
+          case 'generate-title': handleGenerateTitle(conv.id); break
           case 'delete': handleDelete(item, menuInfo.domEvent); break
         }
       },
     }
-  }, [rightClickedConvId, conversations, t, togglePin, toggleArchive, handleRename, handleDelete, buildExportChildren, categories, moveToCategoryMenuItems, updateConversation])
+  }, [rightClickedConvId, conversations, t, togglePin, toggleArchive, handleRename, handleGenerateTitle, handleDelete, buildExportChildren, categories, moveToCategoryMenuItems, updateConversation, titleGeneratingConversationId])
 
   return (
     <div className="flex flex-col h-full">
