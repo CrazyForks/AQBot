@@ -1066,6 +1066,8 @@ pub struct ChatStreamEvent {
     pub conversation_id: String,
     pub message_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider_id: Option<String>,
@@ -1076,6 +1078,8 @@ pub struct ChatStreamEvent {
 pub struct ChatStreamErrorEvent {
     pub conversation_id: String,
     pub message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1171,6 +1175,8 @@ pub struct RagContextResult {
 pub struct RagContextRetrievedEvent {
     pub conversation_id: String,
     pub message_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream_id: Option<String>,
     pub sources: Vec<RagSourceResult>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub errors: Vec<RagSourceError>,

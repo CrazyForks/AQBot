@@ -125,9 +125,53 @@ fn duration_from_timeout_secs(seconds: u64) -> Option<Duration> {
     (seconds > 0).then(|| Duration::from_secs(seconds))
 }
 
+const ACTIVE_STREAM_EXISTS_ERROR: &str = "当前会话已有回复正在生成，请等待完成或停止后再发送";
+
+async fn has_active_stream_for_conversation(
+    cancel_flags: Arc<
+        tokio::sync::Mutex<std::collections::HashMap<String, crate::StreamCancelEntry>>,
+    >,
+    conversation_id: &str,
+) -> bool {
+    let flags = cancel_flags.lock().await;
+    flags.values().any(|entry| {
+        entry.conversation_id == conversation_id
+            && !entry.flag.load(std::sync::atomic::Ordering::Relaxed)
+    })
+}
+
+async fn register_stream_cancel_flag(
+    cancel_flags: Arc<
+        tokio::sync::Mutex<std::collections::HashMap<String, crate::StreamCancelEntry>>,
+    >,
+    conversation_id: &str,
+    stream_id: &str,
+    cancel_flag: Arc<AtomicBool>,
+    allow_parallel: bool,
+) -> Result<(), String> {
+    let mut flags = cancel_flags.lock().await;
+    let has_active_stream = flags.values().any(|entry| {
+        entry.conversation_id == conversation_id
+            && !entry.flag.load(std::sync::atomic::Ordering::Relaxed)
+    });
+    if has_active_stream && !allow_parallel {
+        return Err(ACTIVE_STREAM_EXISTS_ERROR.to_string());
+    }
+
+    flags.insert(
+        stream_id.to_string(),
+        crate::StreamCancelEntry {
+            conversation_id: conversation_id.to_string(),
+            flag: cancel_flag,
+        },
+    );
+    Ok(())
+}
+
 fn build_stream_error_event(
     conversation_id: &str,
     message_id: &str,
+    stream_id: &str,
     model_id: &str,
     provider_id: &str,
     error: String,
@@ -137,6 +181,7 @@ fn build_stream_error_event(
     ChatStreamErrorEvent {
         conversation_id: conversation_id.to_string(),
         message_id: message_id.to_string(),
+        stream_id: Some(stream_id.to_string()),
         model_id: Some(model_id.to_string()),
         provider_id: Some(provider_id.to_string()),
         error,
@@ -148,6 +193,7 @@ fn build_stream_error_event(
 fn build_stream_timeout_error_event(
     conversation_id: &str,
     message_id: &str,
+    stream_id: &str,
     model_id: &str,
     provider_id: &str,
     received_stream_packet: bool,
@@ -169,6 +215,7 @@ fn build_stream_timeout_error_event(
     build_stream_error_event(
         conversation_id,
         message_id,
+        stream_id,
         model_id,
         provider_id,
         error,
@@ -1194,6 +1241,7 @@ async fn consume_stream(
     >,
     conversation_id: &str,
     message_id: &str,
+    stream_id: &str,
     model_id: &str,
     provider_id: &str,
     cancel_flag: &AtomicBool,
@@ -1236,6 +1284,7 @@ async fn consume_stream(
                     let error_event = build_stream_timeout_error_event(
                         conversation_id,
                         message_id,
+                        stream_id,
                         model_id,
                         provider_id,
                         received_stream_packet,
@@ -1352,6 +1401,7 @@ async fn consume_stream(
                         build_stream_error_event(
                             conversation_id,
                             message_id,
+                            stream_id,
                             model_id,
                             provider_id,
                             err_msg.clone(),
@@ -1390,6 +1440,7 @@ async fn consume_stream(
                     ChatStreamEvent {
                         conversation_id: conversation_id.to_string(),
                         message_id: message_id.to_string(),
+                        stream_id: Some(stream_id.to_string()),
                         model_id: Some(model_id.to_string()),
                         provider_id: Some(provider_id.to_string()),
                         chunk: emitted_chunk,
@@ -1407,6 +1458,7 @@ async fn consume_stream(
                     build_stream_error_event(
                         conversation_id,
                         message_id,
+                        stream_id,
                         model_id,
                         provider_id,
                         err_msg.clone(),
@@ -2416,13 +2468,28 @@ pub async fn generate_search_query(
 pub async fn cancel_stream(
     state: State<'_, AppState>,
     conversation_id: String,
+    stream_id: Option<String>,
 ) -> Result<(), String> {
     let flags = state.stream_cancel_flags.lock().await;
-    if let Some(flag) = flags.get(&conversation_id) {
-        flag.store(true, std::sync::atomic::Ordering::Relaxed);
+    let mut cancelled_count = 0usize;
+    if let Some(entry) = stream_id.as_deref().and_then(|id| flags.get(id)) {
+        entry.flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        cancelled_count += 1;
+    } else {
+        for entry in flags
+            .values()
+            .filter(|entry| entry.conversation_id == conversation_id)
+        {
+            entry.flag.store(true, std::sync::atomic::Ordering::Relaxed);
+            cancelled_count += 1;
+        }
+    }
+
+    if cancelled_count > 0 {
         tracing::info!(
-            "[cancel_stream] Cancel requested for conversation {}",
-            conversation_id
+            "[cancel_stream] Cancel requested for conversation {} ({} stream(s))",
+            conversation_id,
+            cancelled_count
         );
     }
     Ok(())
@@ -2537,6 +2604,7 @@ async fn collect_and_emit_rag_context(
     vector_store: &aqbot_core::vector_store::VectorStore,
     conversation_id: &str,
     assistant_message_id: &str,
+    stream_id: &str,
     query: &str,
     kb_ids: Vec<String>,
     mem_ids: Vec<String>,
@@ -2565,6 +2633,7 @@ async fn collect_and_emit_rag_context(
         RagContextRetrievedEvent {
             conversation_id: conversation_id.to_string(),
             message_id: Some(assistant_message_id.to_string()),
+            stream_id: Some(stream_id.to_string()),
             sources: rag_result.source_results.clone(),
             errors: rag_result.errors.clone(),
             empty_results: rag_result.empty_results.clone(),
@@ -2581,6 +2650,7 @@ fn spawn_stream_task(
     db: sea_orm::DatabaseConnection,
     conversation_id: String,
     assistant_message_id: String,
+    stream_id: String,
     conversation: Conversation,
     provider: ProviderConfig,
     ctx: ProviderRequestContext,
@@ -2602,7 +2672,9 @@ fn spawn_stream_task(
     settings: AppSettings,
     master_key: [u8; 32],
     cancel_flag: Arc<AtomicBool>,
-    cancel_flags: Arc<tokio::sync::Mutex<std::collections::HashMap<String, Arc<AtomicBool>>>>,
+    cancel_flags: Arc<
+        tokio::sync::Mutex<std::collections::HashMap<String, crate::StreamCancelEntry>>,
+    >,
     content_prefix: String,
     create_inactive: bool,
     skip_placeholder_create: bool,
@@ -2628,6 +2700,7 @@ fn spawn_stream_task(
                     build_stream_error_event(
                         &conversation_id,
                         &assistant_message_id,
+                        &stream_id,
                         &model_id,
                         &provider.id,
                         format!("Unsupported provider type: {}", registry_key),
@@ -2635,6 +2708,7 @@ fn spawn_stream_task(
                         None,
                     ),
                 );
+                cancel_flags.lock().await.remove(&stream_id);
                 return;
             }
         };
@@ -2725,6 +2799,7 @@ fn spawn_stream_task(
                 &mut stream,
                 &conversation_id,
                 &assistant_message_id,
+                &stream_id,
                 &model_id,
                 &provider.id,
                 &cancel_flag,
@@ -2824,6 +2899,7 @@ fn spawn_stream_task(
                     ChatStreamEvent {
                         conversation_id: conversation_id.clone(),
                         message_id: assistant_message_id.clone(),
+                        stream_id: Some(stream_id.clone()),
                         model_id: Some(model_id.clone()),
                         provider_id: Some(provider.id.clone()),
                         chunk: ChatStreamChunk {
@@ -2888,6 +2964,7 @@ fn spawn_stream_task(
                     ChatStreamEvent {
                         conversation_id: conversation_id.clone(),
                         message_id: assistant_message_id.clone(),
+                        stream_id: Some(stream_id.clone()),
                         model_id: Some(model_id.clone()),
                         provider_id: Some(provider.id.clone()),
                         chunk: ChatStreamChunk {
@@ -3082,7 +3159,7 @@ fn spawn_stream_task(
         }
 
         // Clean up cancel flag
-        cancel_flags.lock().await.remove(&conversation_id);
+        cancel_flags.lock().await.remove(&stream_id);
     });
 }
 
@@ -3091,6 +3168,7 @@ pub async fn send_message(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     conversation_id: String,
+    stream_id: String,
     content: String,
     content_prefix: Option<String>,
     attachments: Vec<AttachmentInput>,
@@ -3100,6 +3178,12 @@ pub async fn send_message(
     enabled_knowledge_base_ids: Option<Vec<String>>,
     enabled_memory_namespace_ids: Option<Vec<String>>,
 ) -> Result<Message, String> {
+    if has_active_stream_for_conversation(state.stream_cancel_flags.clone(), &conversation_id).await
+    {
+        return Err(ACTIVE_STREAM_EXISTS_ERROR.to_string());
+    }
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+
     let persisted_attachments = persist_attachments(&state, &conversation_id, &attachments)
         .await
         .map_err(|e| e.to_string())?;
@@ -3216,12 +3300,14 @@ pub async fn send_message(
     // 5. Generate assistant message ID upfront so early RAG events can target
     // the same assistant row that the stream will later update.
     let assistant_message_id = aqbot_core::utils::gen_id();
-    let cancel_flag = Arc::new(AtomicBool::new(false));
-    state
-        .stream_cancel_flags
-        .lock()
-        .await
-        .insert(conversation_id.clone(), cancel_flag.clone());
+    register_stream_cancel_flag(
+        state.stream_cancel_flags.clone(),
+        &conversation_id,
+        &stream_id,
+        cancel_flag.clone(),
+        false,
+    )
+    .await?;
 
     let user_query_content = strip_search_enrichment(&content);
 
@@ -3235,6 +3321,7 @@ pub async fn send_message(
         state.vector_store.as_ref(),
         &conversation_id,
         &assistant_message_id,
+        &stream_id,
         &user_query_content,
         kb_ids,
         mem_ids,
@@ -3248,11 +3335,7 @@ pub async fn send_message(
     let assistant_content_prefix = format!("{}{}", content_prefix.unwrap_or_default(), memory_tag);
 
     if rag_cancelled {
-        state
-            .stream_cancel_flags
-            .lock()
-            .await
-            .remove(&conversation_id);
+        state.stream_cancel_flags.lock().await.remove(&stream_id);
         return Ok(user_message);
     }
 
@@ -3439,6 +3522,7 @@ pub async fn send_message(
         state.sea_db.clone(),
         conversation_id.clone(),
         assistant_message_id,
+        stream_id,
         conversation,
         provider,
         ctx,
@@ -3475,6 +3559,7 @@ pub async fn regenerate_message(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     conversation_id: String,
+    stream_id: String,
     user_message_id: Option<String>,
     enabled_mcp_server_ids: Option<Vec<String>>,
     thinking_budget: Option<u32>,
@@ -3482,6 +3567,11 @@ pub async fn regenerate_message(
     enabled_knowledge_base_ids: Option<Vec<String>>,
     enabled_memory_namespace_ids: Option<Vec<String>>,
 ) -> Result<(), String> {
+    if has_active_stream_for_conversation(state.stream_cancel_flags.clone(), &conversation_id).await
+    {
+        return Err(ACTIVE_STREAM_EXISTS_ERROR.to_string());
+    }
+
     // 1. Get all active messages for the conversation
     let messages = aqbot_core::repo::message::list_messages(&state.sea_db, &conversation_id)
         .await
@@ -3595,11 +3685,14 @@ pub async fn regenerate_message(
     // 7. Spawn streaming with new version
     let assistant_message_id = aqbot_core::utils::gen_id();
     let cancel_flag = Arc::new(AtomicBool::new(false));
-    state
-        .stream_cancel_flags
-        .lock()
-        .await
-        .insert(conversation_id.clone(), cancel_flag.clone());
+    register_stream_cancel_flag(
+        state.stream_cancel_flags.clone(),
+        &conversation_id,
+        &stream_id,
+        cancel_flag.clone(),
+        false,
+    )
+    .await?;
 
     let target_user_content = strip_search_enrichment(&last_user_msg.content);
 
@@ -3614,6 +3707,7 @@ pub async fn regenerate_message(
             state.vector_store.as_ref(),
             &conversation_id,
             &assistant_message_id,
+            &stream_id,
             &target_user_content,
             kb_ids,
             mem_ids,
@@ -3636,11 +3730,7 @@ pub async fn regenerate_message(
             });
         }
         if rag_cancelled {
-            state
-                .stream_cancel_flags
-                .lock()
-                .await
-                .remove(&conversation_id);
+            state.stream_cancel_flags.lock().await.remove(&stream_id);
             return Ok(());
         }
         tag
@@ -3741,6 +3831,7 @@ pub async fn regenerate_message(
         state.sea_db.clone(),
         conversation_id,
         assistant_message_id,
+        stream_id,
         conversation,
         provider,
         ctx,
@@ -3776,6 +3867,7 @@ pub async fn regenerate_with_model(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     conversation_id: String,
+    stream_id: String,
     user_message_id: String,
     target_provider_id: String,
     target_model_id: String,
@@ -3786,6 +3878,14 @@ pub async fn regenerate_with_model(
     enabled_memory_namespace_ids: Option<Vec<String>>,
     is_companion: Option<bool>,
 ) -> Result<(), String> {
+    let companion = is_companion.unwrap_or(false);
+    if !companion
+        && has_active_stream_for_conversation(state.stream_cancel_flags.clone(), &conversation_id)
+            .await
+    {
+        return Err(ACTIVE_STREAM_EXISTS_ERROR.to_string());
+    }
+
     let messages = aqbot_core::repo::message::list_messages(&state.sea_db, &conversation_id)
         .await
         .map_err(|e| e.to_string())?;
@@ -3806,8 +3906,6 @@ pub async fn regenerate_with_model(
     .map_err(|e| e.to_string())?;
     let new_version_index = existing_versions.len() as i32;
     let original_created_at = existing_versions.first().map(|v| v.created_at);
-
-    let companion = is_companion.unwrap_or(false);
 
     // Deactivate all existing versions (skip for companion models in multi-model mode)
     use aqbot_core::entity::messages as msg_entity;
@@ -3887,11 +3985,14 @@ pub async fn regenerate_with_model(
 
     let assistant_message_id = aqbot_core::utils::gen_id();
     let cancel_flag = Arc::new(AtomicBool::new(false));
-    state
-        .stream_cancel_flags
-        .lock()
-        .await
-        .insert(conversation_id.clone(), cancel_flag.clone());
+    register_stream_cancel_flag(
+        state.stream_cancel_flags.clone(),
+        &conversation_id,
+        &stream_id,
+        cancel_flag.clone(),
+        companion,
+    )
+    .await?;
 
     let target_user_content = strip_search_enrichment(&user_msg.content);
 
@@ -3906,6 +4007,7 @@ pub async fn regenerate_with_model(
             state.vector_store.as_ref(),
             &conversation_id,
             &assistant_message_id,
+            &stream_id,
             &target_user_content,
             kb_ids,
             mem_ids,
@@ -3928,11 +4030,7 @@ pub async fn regenerate_with_model(
             });
         }
         if rag_cancelled {
-            state
-                .stream_cancel_flags
-                .lock()
-                .await
-                .remove(&conversation_id);
+            state.stream_cancel_flags.lock().await.remove(&stream_id);
             return Ok(());
         }
         tag
@@ -4073,6 +4171,7 @@ pub async fn regenerate_with_model(
         state.sea_db.clone(),
         conversation_id,
         assistant_message_id,
+        stream_id,
         conversation,
         provider,
         ctx,
@@ -4683,6 +4782,7 @@ mod tests {
         let event = build_stream_timeout_error_event(
             "conv-1",
             "msg-1",
+            "stream-1",
             "model-1",
             "provider-1",
             false,
@@ -4699,6 +4799,7 @@ mod tests {
         let event = build_stream_timeout_error_event(
             "conv-1",
             "msg-1",
+            "stream-1",
             "model-1",
             "provider-1",
             true,
@@ -4708,6 +4809,63 @@ mod tests {
         assert_eq!(event.error, "模型响应空闲超时，已超过 12 秒未收到新内容");
         assert_eq!(event.kind.as_deref(), Some("idle_timeout"));
         assert_eq!(event.timeout_secs, Some(12));
+    }
+
+    #[tokio::test]
+    async fn register_stream_cancel_flag_rejects_overlapping_plain_stream_without_overwriting() {
+        let flags = Arc::new(Mutex::new(std::collections::HashMap::new()));
+        let first_flag = Arc::new(AtomicBool::new(false));
+        let second_flag = Arc::new(AtomicBool::new(false));
+
+        register_stream_cancel_flag(
+            flags.clone(),
+            "conv-1",
+            "stream-a",
+            first_flag.clone(),
+            false,
+        )
+        .await
+        .unwrap();
+
+        let err =
+            register_stream_cancel_flag(flags.clone(), "conv-1", "stream-b", second_flag, false)
+                .await
+                .unwrap_err();
+
+        assert!(err.contains("已有回复正在生成"));
+        let guard = flags.lock().await;
+        assert!(guard.contains_key("stream-a"));
+        assert!(!guard.contains_key("stream-b"));
+        assert_eq!(guard.get("stream-a").unwrap().conversation_id, "conv-1");
+    }
+
+    #[tokio::test]
+    async fn register_stream_cancel_flag_allows_parallel_companion_streams() {
+        let flags = Arc::new(Mutex::new(std::collections::HashMap::new()));
+
+        register_stream_cancel_flag(
+            flags.clone(),
+            "conv-1",
+            "stream-a",
+            Arc::new(AtomicBool::new(false)),
+            false,
+        )
+        .await
+        .unwrap();
+
+        register_stream_cancel_flag(
+            flags.clone(),
+            "conv-1",
+            "stream-b",
+            Arc::new(AtomicBool::new(false)),
+            true,
+        )
+        .await
+        .unwrap();
+
+        let guard = flags.lock().await;
+        assert!(guard.contains_key("stream-a"));
+        assert!(guard.contains_key("stream-b"));
     }
 
     #[test]

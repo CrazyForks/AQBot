@@ -103,6 +103,7 @@ describe('conversationStore pagination', () => {
       streaming: false,
       streamingMessageId: null,
       streamingConversationId: null,
+      activeStreamId: null,
       streamActivityByMessageId: {},
       thinkingActiveMessageIds: new Set<string>(),
       error: null,
@@ -784,6 +785,140 @@ describe('conversationStore pagination', () => {
     expect(message?.content).toContain('已生成的前半段');
     expect(message?.content).toContain('模型响应空闲超时');
     expect(useConversationStore.getState().streamActivityByMessageId['assistant-1']).toBeUndefined();
+  });
+
+  it('ignores stale stream events from a previous stream id', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map<string, (event: unknown) => void>();
+    listenMock.mockImplementation(async (eventName: string, handler: (event: unknown) => void) => {
+      listeners.set(eventName, handler);
+      return () => {};
+    });
+    const { useConversationStore } = await import('../conversationStore');
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      streaming: true,
+      streamingMessageId: 'assistant-current',
+      streamingConversationId: 'conv-1',
+      activeStreamId: 'stream-current',
+      messages: [
+        {
+          ...makeMessage(2),
+          id: 'assistant-current',
+          role: 'assistant',
+          content: 'current',
+          status: 'partial',
+        },
+      ],
+    } as never);
+
+    await useConversationStore.getState().startStreamListening();
+    const onChunk = listeners.get('chat-stream-chunk');
+    const onError = listeners.get('chat-stream-error');
+    expect(onChunk).toBeTypeOf('function');
+    expect(onError).toBeTypeOf('function');
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-old',
+        stream_id: 'stream-old',
+        chunk: {
+          content: 'old done',
+          thinking: null,
+          tool_calls: null,
+          done: true,
+          is_final: true,
+          usage: null,
+        },
+      },
+    });
+
+    expect(useConversationStore.getState().streaming).toBe(true);
+    expect(useConversationStore.getState().streamingMessageId).toBe('assistant-current');
+    expect(useConversationStore.getState().messages[0]?.content).toBe('current');
+
+    onError?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-old',
+        stream_id: 'stream-old',
+        error: 'old timeout',
+        kind: 'idle_timeout',
+        timeout_secs: 90,
+      },
+    });
+
+    expect(useConversationStore.getState().streaming).toBe(true);
+    expect(useConversationStore.getState().streamingMessageId).toBe('assistant-current');
+    expect(useConversationStore.getState().messages[0]?.content).toBe('current');
+
+    onChunk?.({
+      payload: {
+        conversation_id: 'conv-1',
+        message_id: 'assistant-current',
+        stream_id: 'stream-current',
+        chunk: {
+          content: ' answer',
+          thinking: null,
+          tool_calls: null,
+          done: false,
+          usage: null,
+        },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(20);
+
+    expect(useConversationStore.getState().streaming).toBe(true);
+    expect(useConversationStore.getState().messages[0]?.content).toBe('current answer');
+    vi.useRealTimers();
+  });
+
+  it('rolls back optimistic send when the backend rejects an overlapping stream', async () => {
+    vi.useFakeTimers();
+    listenMock.mockResolvedValue(() => {});
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === 'send_message') {
+        return Promise.reject(new Error('当前会话已有回复正在生成，请等待完成或停止后再发送'));
+      }
+      throw new Error(`unexpected command: ${cmd}`);
+    });
+    const { useConversationStore } = await import('../conversationStore');
+    const activeUser = {
+      ...makeMessage(1),
+      id: 'user-active',
+      role: 'user' as const,
+      content: 'first',
+    };
+    const activeAssistant = {
+      ...makeMessage(2),
+      id: 'assistant-active',
+      role: 'assistant' as const,
+      content: 'still streaming',
+      parent_message_id: activeUser.id,
+      status: 'partial' as const,
+    };
+
+    useConversationStore.setState({
+      activeConversationId: 'conv-1',
+      conversations: [makeConversation('conv-1')] as never[],
+      streaming: true,
+      streamingMessageId: activeAssistant.id,
+      streamingConversationId: 'conv-1',
+      activeStreamId: 'stream-active',
+      messages: [activeUser, activeAssistant],
+    } as never);
+
+    await useConversationStore.getState().sendMessage('second');
+
+    const state = useConversationStore.getState();
+    expect(state.streaming).toBe(true);
+    expect(state.streamingMessageId).toBe(activeAssistant.id);
+    expect(state.activeStreamId).toBe('stream-active');
+    expect(state.messages.map((message) => message.id)).toEqual(['user-active', 'assistant-active']);
+    expect(state.messages[1]?.content).toBe('still streaming');
+    vi.useRealTimers();
   });
 
   it('keeps rendered search tags in local assistant content when model thinking starts streaming', async () => {

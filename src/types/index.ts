@@ -523,6 +523,7 @@ export interface ChatStreamChunk {
 export interface ChatStreamEvent {
   conversation_id: string;
   message_id: string;
+  stream_id?: string | null;
   model_id?: string;
   provider_id?: string;
   chunk: ChatStreamChunk;
@@ -531,6 +532,7 @@ export interface ChatStreamEvent {
 export interface ChatStreamErrorEvent {
   conversation_id: string;
   message_id: string;
+  stream_id?: string | null;
   model_id?: string;
   provider_id?: string;
   error: string;

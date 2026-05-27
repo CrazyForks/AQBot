@@ -11,6 +11,12 @@ use std::os::unix::fs::PermissionsExt;
 
 use std::path::PathBuf;
 
+#[derive(Clone)]
+pub struct StreamCancelEntry {
+    pub conversation_id: String,
+    pub flag: Arc<AtomicBool>,
+}
+
 pub struct AppState {
     pub sea_db: DatabaseConnection,
     pub master_key: [u8; 32],
@@ -27,7 +33,7 @@ pub struct AppState {
     pub s3_sync_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     pub vector_store: Arc<aqbot_core::vector_store::VectorStore>,
     pub knowledge_index_scheduler: Arc<knowledge_index_scheduler::KnowledgeIndexScheduler>,
-    pub stream_cancel_flags: Arc<Mutex<std::collections::HashMap<String, Arc<AtomicBool>>>>,
+    pub stream_cancel_flags: Arc<Mutex<std::collections::HashMap<String, StreamCancelEntry>>>,
     pub agent_cancel_tokens:
         Arc<Mutex<std::collections::HashMap<String, open_agent_sdk::CancellationToken>>>,
     pub agent_permission_senders:

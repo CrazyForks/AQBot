@@ -30,6 +30,7 @@ export interface RagSourceEmptyResult {
 export interface RagContextRetrievedEvent {
   conversation_id: string;
   message_id?: string | null;
+  stream_id?: string | null;
   sources: MemorySourceResult[];
   errors?: RagSourceError[];
   empty_results?: RagSourceEmptyResult[];
