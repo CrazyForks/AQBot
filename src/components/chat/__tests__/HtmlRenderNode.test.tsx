@@ -1,10 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HtmlRenderNode } from '../HtmlRenderNode';
 
 describe('HtmlRenderNode', () => {
-  it('renders sanitized html preview by default', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders sanitized html directly', () => {
     render(
       <HtmlRenderNode
         node={{
@@ -15,11 +19,11 @@ describe('HtmlRenderNode', () => {
       />,
     );
 
-    const preview = screen.getByTestId('html-render-preview');
-    expect(preview.innerHTML).toContain('style="color:red"');
-    expect(preview.innerHTML).toContain('safe');
-    expect(preview.innerHTML).not.toContain('onclick');
-    expect(preview.innerHTML).not.toContain('<script');
+    const content = screen.getByTestId('html-render-content');
+    expect(content.innerHTML).toContain('style="color:red"');
+    expect(content.innerHTML).toContain('safe');
+    expect(content.innerHTML).not.toContain('onclick');
+    expect(content.innerHTML).not.toContain('<script');
   });
 
   it('removes unsafe urls from rendered links', () => {
@@ -37,7 +41,7 @@ describe('HtmlRenderNode', () => {
     expect(link).not.toHaveAttribute('href');
   });
 
-  it('can switch from preview to source without losing original content', () => {
+  it('does not render display chrome around the html fragment', () => {
     render(
       <HtmlRenderNode
         node={{
@@ -48,8 +52,125 @@ describe('HtmlRenderNode', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '源码' }));
+    const content = screen.getByTestId('html-render-content');
+    expect(content).toHaveTextContent('Title');
+    expect(screen.queryByText('HTML Render')).toBeNull();
+    expect(screen.queryByRole('button', { name: '预览' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '源码' })).toBeNull();
+  });
 
-    expect(screen.getByTestId('html-render-source')).toHaveTextContent('<section><h1>Title</h1></section>');
+  it('coalesces streaming html updates until the next animation frame', () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+
+    const { rerender } = render(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          loading: true,
+          content: '<div>first</div>',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('html-render-content')).toHaveTextContent('first');
+
+    rerender(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          loading: true,
+          content: '<div>second</div>',
+        }}
+      />,
+    );
+    rerender(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          loading: true,
+          content: '<div>third</div>',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('html-render-content')).toHaveTextContent('first');
+    expect(frameCallbacks).toHaveLength(1);
+
+    act(() => {
+      frameCallbacks[0]?.(16);
+    });
+
+    expect(screen.getByTestId('html-render-content')).toHaveTextContent('third');
+  });
+
+  it('renders final html updates immediately without waiting for animation frame', () => {
+    const frameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+
+    const { rerender } = render(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          loading: true,
+          content: '<div>draft</div>',
+        }}
+      />,
+    );
+
+    rerender(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          loading: false,
+          content: '<div>final</div>',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('html-render-content')).toHaveTextContent('final');
+  });
+
+  it('adapts common light inline colors for dark mode', () => {
+    render(
+      <HtmlRenderNode
+        {...({
+          isDark: true,
+          node: {
+            type: 'html-render',
+            content: '<div style="color:#111;background:#fff;border:1px solid #eee">dark friendly</div>',
+          },
+        } as any)}
+      />,
+    );
+
+    const content = screen.getByTestId('html-render-content');
+    expect(content).toHaveStyle({ colorScheme: 'dark' });
+    expect(content.innerHTML).toContain('var(--aqbot-html-fg)');
+    expect(content.innerHTML).toContain('rgba(255,255,255,0.06)');
+    expect(content.innerHTML).toContain('rgba(255,255,255,0.18)');
+  });
+
+  it('removes style tags from html render fragments', () => {
+    render(
+      <HtmlRenderNode
+        node={{
+          type: 'html-render',
+          content: '<style>.x{color:red}</style><div>safe</div>',
+        }}
+      />,
+    );
+
+    const content = screen.getByTestId('html-render-content');
+    expect(content).toHaveTextContent('safe');
+    expect(content.innerHTML).not.toContain('<style');
   });
 });

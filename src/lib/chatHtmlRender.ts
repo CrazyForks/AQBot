@@ -39,6 +39,21 @@ function findUnmatchedHtmlRenderStart(content: string) {
   return depth > 0 ? unmatchedStart : -1;
 }
 
+function closeStreamingHtmlRender(content: string) {
+  const startIndex = findUnmatchedHtmlRenderStart(content);
+  if (startIndex === -1) return content;
+
+  HTML_RENDER_OPEN_RE.lastIndex = startIndex;
+  const openMatch = HTML_RENDER_OPEN_RE.exec(content);
+  if (!openMatch || openMatch.index !== startIndex) {
+    return `${content}</html-render>`;
+  }
+
+  const openEnd = startIndex + openMatch[0].length;
+  const needsBlockBoundary = content[openEnd] && content[openEnd] !== '\n';
+  return `${content.slice(0, openEnd)}${needsBlockBoundary ? '\n' : ''}${content.slice(openEnd)}</html-render>`;
+}
+
 export function normalizeHtmlRenderMarkers(
   content: string,
   options: HtmlRenderNormalizeOptions = {},
@@ -86,6 +101,10 @@ export function normalizeHtmlRenderContent(
   options: HtmlRenderNormalizeOptions = {},
 ) {
   const normalized = normalizeHtmlRenderMarkers(content, options);
+  if (!options.final && findUnmatchedHtmlRenderStart(normalized) !== -1) {
+    return closeStreamingHtmlRender(normalized);
+  }
+
   if (!shouldFallbackIncompleteHtmlRender(normalized, options)) {
     return normalized;
   }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { getMarkdown, parseMarkdownToStructure } from 'stream-markdown-parser';
 
 import {
+  normalizeHtmlRenderContent,
   normalizeHtmlRenderMarkers,
   shouldFallbackIncompleteHtmlRender,
 } from '../chatHtmlRender';
@@ -34,5 +36,32 @@ describe('chat html render marker compatibility', () => {
     expect(shouldFallbackIncompleteHtmlRender('<html-render><div>draft', { final: false })).toBe(false);
     expect(shouldFallbackIncompleteHtmlRender('<html-render><div>draft', { final: true })).toBe(true);
     expect(shouldFallbackIncompleteHtmlRender('<html-render><div>ok</div></html-render>', { final: true })).toBe(false);
+  });
+
+  it('temporarily closes incomplete html-render tags while streaming', () => {
+    expect(normalizeHtmlRenderContent('<html-render><div>draft', { final: false })).toBe(
+      '<html-render>\n<div>draft</html-render>',
+    );
+  });
+
+  it('temporarily closes incomplete comment marker html-render blocks while streaming', () => {
+    expect(normalizeHtmlRenderContent('before <!-- html-render-start --><div>draft', { final: false })).toBe(
+      'before <html-render>\n<div>draft</html-render>',
+    );
+  });
+
+  it('keeps streaming html-render content parseable before the final closing tag arrives', () => {
+    const normalized = normalizeHtmlRenderContent('<html-render><div class="card">draft', { final: false });
+    const md = getMarkdown('chat-html-render-streaming-test', { customHtmlTags: ['html-render'] });
+    const nodes = parseMarkdownToStructure(normalized, md, {
+      customHtmlTags: ['html-render'],
+      final: false,
+    });
+
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({
+      type: 'html-render',
+      content: '<div class="card">draft',
+    });
   });
 });
