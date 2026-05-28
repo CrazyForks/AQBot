@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProviderConfig, ProviderKey } from '@/types';
@@ -175,6 +175,15 @@ describe('ProviderDetail', () => {
     });
   });
 
+  async function openFirstModelSettings() {
+    const modelLabel = screen.getByText('GPT 5.4');
+    const row = modelLabel.closest('[data-index]');
+    expect(row).not.toBeNull();
+    const buttons = within(row as HTMLElement).getAllByRole('button');
+    await userEvent.click(buttons[0]);
+    return screen.findByRole('dialog');
+  }
+
   it('shows model sync request preview from the resolved base URL', () => {
     provider.api_host = 'https://api.openai.com';
     provider.api_path = '/v1/chat/completions';
@@ -335,6 +344,77 @@ describe('ProviderDetail', () => {
     await waitFor(() => {
       expect(mocks.updateProviderKey).toHaveBeenCalledWith('key-1', 'sk-updated-secret');
     });
+  });
+
+  it('saves model extra_body as a JSON object override', async () => {
+    mocks.updateModelParams.mockResolvedValue(provider.models[0]);
+    provider.models[0].param_overrides = {
+      temperature: 0.1,
+      extra_body: { enable_thinking: true },
+    };
+
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    const dialog = await openFirstModelSettings();
+    const extraBodyInput = within(dialog).getByLabelText('settings.extraBody');
+    expect(extraBodyInput).toHaveValue('{\n  "enable_thinking": true\n}');
+
+    fireEvent.change(extraBodyInput, {
+      target: { value: '{"thinking":{"type":"enabled"},"include_reasoning":true}' },
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => {
+      expect(mocks.updateModelParams).toHaveBeenCalledWith(
+        'provider-1',
+        'gpt-5.4',
+        expect.objectContaining({
+          temperature: 0.1,
+          extra_body: {
+            thinking: { type: 'enabled' },
+            include_reasoning: true,
+          },
+        }),
+      );
+    });
+  });
+
+  it('rejects invalid model extra_body JSON before saving', async () => {
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    const dialog = await openFirstModelSettings();
+    const extraBodyInput = within(dialog).getByLabelText('settings.extraBody');
+
+    fireEvent.change(extraBodyInput, { target: { value: '["enable_thinking"]' } });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'common.save' }));
+
+    expect(mocks.updateModelParams).not.toHaveBeenCalled();
+    expect(within(dialog).getByText('settings.extraBodyObjectError')).toBeInTheDocument();
+  });
+
+  it('rejects reserved model extra_body fields before saving', async () => {
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    const dialog = await openFirstModelSettings();
+    const extraBodyInput = within(dialog).getByLabelText('settings.extraBody');
+
+    fireEvent.change(extraBodyInput, { target: { value: '{"model":"other","enable_thinking":true}' } });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'common.save' }));
+
+    expect(mocks.updateModelParams).not.toHaveBeenCalled();
+    expect(within(dialog).getByText('settings.extraBodyReservedError')).toBeInTheDocument();
   });
 
   it('syncs remote models without overwriting existing local model settings', async () => {

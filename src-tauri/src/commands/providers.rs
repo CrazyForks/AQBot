@@ -437,6 +437,7 @@ pub async fn test_model(
             reasoning_profile: None,
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         };
         adapter
             .chat(&ctx, request)

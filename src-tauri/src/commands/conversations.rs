@@ -314,6 +314,12 @@ fn resolve_chat_model_params(
     }
 }
 
+fn model_extra_body_from_overrides(
+    model_param_overrides: Option<&ModelParamOverrides>,
+) -> Option<serde_json::Map<String, serde_json::Value>> {
+    model_param_overrides.and_then(|params| params.extra_body.clone())
+}
+
 pub(crate) async fn persist_attachments(
     state: &AppState,
     conversation_id: &str,
@@ -1970,6 +1976,7 @@ fn build_search_query_request(
         reasoning_profile: None,
         use_max_completion_tokens,
         thinking_param_style: None,
+        extra_body: None,
     }
 }
 
@@ -2169,6 +2176,7 @@ async fn generate_ai_title_with(
         reasoning_profile: None,
         use_max_completion_tokens,
         thinking_param_style: None,
+        extra_body: None,
     };
 
     let registry = ProviderRegistry::create_default();
@@ -2843,6 +2851,7 @@ fn spawn_stream_task(
                 reasoning_profile: reasoning_profile.clone(),
                 use_max_completion_tokens,
                 thinking_param_style: thinking_param_style.clone(),
+                extra_body: model_extra_body_from_overrides(model_param_overrides.as_ref()),
             };
 
             let mut stream = adapter.chat_stream(&ctx, request);
@@ -4417,6 +4426,7 @@ async fn do_compress(
         reasoning_profile: None,
         use_max_completion_tokens: comp_use_max,
         thinking_param_style: None,
+        extra_body: None,
     };
 
     let ctx = ProviderRequestContext {
@@ -4721,7 +4731,29 @@ mod tests {
             reasoning_profile: None,
             reasoning_options: None,
             reasoning_default: None,
+            extra_body: None,
         }
+    }
+
+    #[test]
+    fn model_extra_body_is_cloned_from_model_param_overrides() {
+        let extra_body = serde_json::json!({
+            "enable_thinking": true,
+            "thinking": {
+                "type": "enabled"
+            }
+        })
+        .as_object()
+        .expect("object")
+        .clone();
+        let mut overrides = test_param_overrides(None, None, None);
+        overrides.extra_body = Some(extra_body.clone());
+
+        assert_eq!(
+            model_extra_body_from_overrides(Some(&overrides)),
+            Some(extra_body)
+        );
+        assert_eq!(model_extra_body_from_overrides(None), None);
     }
 
     fn test_docx_bytes(text: &str) -> Vec<u8> {

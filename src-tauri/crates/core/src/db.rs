@@ -149,6 +149,7 @@ fn empty_param_overrides() -> ModelParamOverrides {
         reasoning_profile: None,
         reasoning_options: None,
         reasoning_default: None,
+        extra_body: None,
     }
 }
 

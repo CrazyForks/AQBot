@@ -135,6 +135,7 @@ export interface ModelParamOverrides {
   reasoning_profile?: string;
   reasoning_options?: string[];
   reasoning_default?: string;
+  extra_body?: Record<string, unknown>;
 }
 
 // === Conversation & Message ===

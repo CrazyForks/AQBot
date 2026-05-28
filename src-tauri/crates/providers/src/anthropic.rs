@@ -405,6 +405,7 @@ mod tests {
             reasoning_profile: Some(reasoning_profile.to_string()),
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         }
     }
 

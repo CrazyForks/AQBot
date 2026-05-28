@@ -132,6 +132,19 @@ struct StreamOptions {
     include_usage: bool,
 }
 
+const RESERVED_EXTRA_BODY_FIELDS: &[&str] = &[
+    "model",
+    "messages",
+    "stream",
+    "stream_options",
+    "tools",
+    "temperature",
+    "top_p",
+    "max_tokens",
+    "max_completion_tokens",
+    "reasoning_effort",
+];
+
 #[derive(Serialize)]
 struct OpenAIMessage {
     role: String,
@@ -727,6 +740,22 @@ fn normalized_max_completion_tokens<P: OpenAICompatPolicy>(
     })
 }
 
+fn merge_model_extra_body(
+    extra: &mut Map<String, Value>,
+    custom: Option<&Map<String, Value>>,
+) {
+    let Some(custom) = custom else {
+        return;
+    };
+
+    for (key, value) in custom {
+        if RESERVED_EXTRA_BODY_FIELDS.contains(&key.as_str()) {
+            continue;
+        }
+        extra.insert(key.clone(), value.clone());
+    }
+}
+
 fn build_request<P: OpenAICompatPolicy>(
     policy: &P,
     request: &ChatRequest,
@@ -740,7 +769,8 @@ fn build_request<P: OpenAICompatPolicy>(
         let effort = r.reasoning_effort.clone()?;
         policy.normalize_reasoning_effort(&r.level, effort)
     });
-    let extra = policy.extra_body_fields(reasoning.as_ref());
+    let mut extra = policy.extra_body_fields(reasoning.as_ref());
+    merge_model_extra_body(&mut extra, request.extra_body.as_ref());
 
     // Use max_completion_tokens only when the model/request contract requires it.
     let use_completion_tokens = policy.use_max_completion_tokens(request);
@@ -838,6 +868,7 @@ mod tests {
             reasoning_profile: None,
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         }
     }
 
@@ -1393,6 +1424,53 @@ mod tests {
         assert_eq!(serialized["max_tokens"], json!(300_000));
         assert!(serialized.get("temperature").is_none());
         assert!(serialized.get("top_p").is_none());
+    }
+
+    #[test]
+    fn openai_compat_flattens_model_extra_body_fields() {
+        let mut request = base_chat_request("gpt-4o");
+        request.extra_body = Some(
+            serde_json::json!({
+                "enable_thinking": true,
+                "vendor_options": {
+                    "trace": "enabled"
+                }
+            })
+            .as_object()
+            .expect("object")
+            .clone(),
+        );
+
+        let body = build_request(&OpenAIPolicy, &request, &request.messages, true);
+        let serialized = serde_json::to_value(body).expect("request json");
+
+        assert_eq!(serialized["enable_thinking"], json!(true));
+        assert_eq!(serialized["vendor_options"]["trace"], json!("enabled"));
+        assert!(serialized.get("extra_body").is_none());
+    }
+
+    #[test]
+    fn openai_compat_extra_body_cannot_override_core_fields() {
+        let mut request = base_chat_request("gpt-4o");
+        request.extra_body = Some(
+            serde_json::json!({
+                "model": "other-model",
+                "stream": false,
+                "max_tokens": 1,
+                "enable_thinking": true
+            })
+            .as_object()
+            .expect("object")
+            .clone(),
+        );
+
+        let body = build_request(&OpenAIPolicy, &request, &request.messages, true);
+        let serialized = serde_json::to_value(body).expect("request json");
+
+        assert_eq!(serialized["model"], json!("gpt-4o"));
+        assert_eq!(serialized["stream"], json!(true));
+        assert_eq!(serialized["max_tokens"], json!(300_000));
+        assert_eq!(serialized["enable_thinking"], json!(true));
     }
 }
 

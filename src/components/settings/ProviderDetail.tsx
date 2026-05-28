@@ -151,6 +151,51 @@ function normalizeReasoningProfile(value: string): string | undefined {
   return value === 'reasoning_effort' ? undefined : value;
 }
 
+const RESERVED_EXTRA_BODY_FIELDS = new Set([
+  'model',
+  'messages',
+  'stream',
+  'stream_options',
+  'tools',
+  'temperature',
+  'top_p',
+  'max_tokens',
+  'max_completion_tokens',
+  'reasoning_effort',
+]);
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function formatExtraBody(extraBody: ModelParamOverrides['extra_body']): string {
+  if (!extraBody || Object.keys(extraBody).length === 0) return '';
+  return JSON.stringify(extraBody, null, 2);
+}
+
+function parseExtraBodyInput(text: string): { value?: Record<string, unknown>; errorKey?: string } {
+  const trimmed = text.trim();
+  if (!trimmed) return {};
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { errorKey: 'settings.extraBodyJsonError' };
+  }
+
+  if (!isJsonObject(parsed)) {
+    return { errorKey: 'settings.extraBodyObjectError' };
+  }
+
+  const reservedField = Object.keys(parsed).find((key) => RESERVED_EXTRA_BODY_FIELDS.has(key));
+  if (reservedField) {
+    return { errorKey: 'settings.extraBodyReservedError' };
+  }
+
+  return Object.keys(parsed).length > 0 ? { value: parsed } : {};
+}
+
 type KeyModalMode = 'add' | 'edit';
 type ModelSyncStatus = 'synced' | 'local-only' | 'remote-only';
 
@@ -291,6 +336,8 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
   const [editNoSystemRole, setEditNoSystemRole] = useState(false);
   const [editForceMaxTokens, setEditForceMaxTokens] = useState(false);
   const [editThinkingParamStyle, setEditThinkingParamStyle] = useState<string>('reasoning_effort');
+  const [editExtraBody, setEditExtraBody] = useState('');
+  const [editExtraBodyError, setEditExtraBodyError] = useState<string | null>(null);
   const [iconOverrides, setIconOverrides] = useState<Record<string, string>>({});
   const [apiHostLocal, setApiHostLocal] = useState(provider?.api_host ?? '');
   const [apiPathLocal, setApiPathLocal] = useState(provider?.api_path ?? '');
@@ -722,6 +769,8 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
       setEditNoSystemRole(model.param_overrides?.no_system_role ?? false);
       setEditForceMaxTokens(model.param_overrides?.force_max_tokens ?? false);
       setEditThinkingParamStyle(model.param_overrides?.reasoning_profile ?? model.param_overrides?.thinking_param_style ?? 'reasoning_effort');
+      setEditExtraBody(formatExtraBody(model.param_overrides?.extra_body));
+      setEditExtraBodyError(null);
       setSettingsModalOpen(true);
     },
     [],
@@ -729,6 +778,11 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
 
   const handleSaveSettings = useCallback(async () => {
     if (!editingModel) return;
+    const parsedExtraBody = parseExtraBodyInput(editExtraBody);
+    if (parsedExtraBody.errorKey) {
+      setEditExtraBodyError(parsedExtraBody.errorKey);
+      return;
+    }
     const values: ModelParamOverrides = {
       temperature: editTemperature ?? undefined,
       max_tokens: editMaxTokensParam ?? undefined,
@@ -741,6 +795,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
         ? editThinkingParamStyle
         : undefined,
       reasoning_profile: normalizeReasoningProfile(editThinkingParamStyle),
+      extra_body: parsedExtraBody.value,
     };
     const nextCapabilities = sanitizeModelCapabilities(editModelType, editCapabilities);
     try {
@@ -757,7 +812,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
     } catch {
       message.error(t('error.saveFailed'));
     }
-  }, [editingModel, editCapabilities, editModelType, editMaxTokens, editTemperature, editMaxTokensParam, editTopP, editFreqPenalty, editUseMaxCompletionTokens, editNoSystemRole, editForceMaxTokens, editThinkingParamStyle, providerId, updateModelParams, saveModels, provider?.models, message, t]);
+  }, [editingModel, editCapabilities, editModelType, editMaxTokens, editTemperature, editMaxTokensParam, editTopP, editFreqPenalty, editUseMaxCompletionTokens, editNoSystemRole, editForceMaxTokens, editThinkingParamStyle, editExtraBody, providerId, updateModelParams, saveModels, provider?.models, message, t]);
 
   const handleApiHostChange = useCallback(
     (value: string) => {
@@ -1953,6 +2008,25 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
                         : option
                     ))}
                   />
+                </div>
+                <div>
+                  <div className="font-medium mb-1.5" style={{ fontSize: 13 }}>
+                    {t('settings.extraBody')}
+                  </div>
+                  <Input.TextArea
+                    aria-label={t('settings.extraBody')}
+                    value={editExtraBody}
+                    onChange={(event) => {
+                      setEditExtraBody(event.target.value);
+                      setEditExtraBodyError(null);
+                    }}
+                    status={editExtraBodyError ? 'error' : undefined}
+                    placeholder={t('settings.extraBodyPlaceholder')}
+                    autoSize={{ minRows: 3, maxRows: 8 }}
+                  />
+                  <Text type={editExtraBodyError ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                    {editExtraBodyError ? t(editExtraBodyError) : t('settings.extraBodyHint')}
+                  </Text>
                 </div>
               </div>
             </div>

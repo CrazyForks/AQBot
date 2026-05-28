@@ -256,6 +256,7 @@ fn empty_param_overrides_for_import(provider_type: &ProviderType) -> Option<Mode
         reasoning_profile: Some(profile),
         reasoning_options: None,
         reasoning_default: None,
+        extra_body: None,
     })
 }
 

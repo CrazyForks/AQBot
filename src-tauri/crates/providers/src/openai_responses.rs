@@ -1176,6 +1176,7 @@ mod tests {
             reasoning_profile: None,
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         };
         let built = build_request(&request, false);
         assert_eq!(built.max_output_tokens, Some(100));
@@ -1204,6 +1205,7 @@ mod tests {
             reasoning_profile: None,
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         };
         let built = build_request(&request, false);
         assert_eq!(built.max_output_tokens, Some(16));
@@ -1230,6 +1232,7 @@ mod tests {
             reasoning_profile: Some("openai_responses_reasoning".to_string()),
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         };
         let built = build_request(&request, false);
         let reasoning = built.reasoning.expect("reasoning should be sent");

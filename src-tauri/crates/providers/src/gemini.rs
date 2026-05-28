@@ -456,6 +456,7 @@ mod tests {
             reasoning_profile: Some("gemini_thinking_level".to_string()),
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         }
     }
 

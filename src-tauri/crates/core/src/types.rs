@@ -269,6 +269,8 @@ pub struct ModelParamOverrides {
     pub reasoning_options: Option<Vec<String>>,
     /// Optional default reasoning option key for this model.
     pub reasoning_default: Option<String>,
+    /// Model-specific extra JSON body fields for OpenAI-compatible chat requests.
+    pub extra_body: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 // === Conversation & Message ===
@@ -981,6 +983,9 @@ pub struct ChatRequest {
     /// Thinking parameter format: "reasoning_effort" (default) or "enable_thinking" (SiliconFlow).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking_param_style: Option<String>,
+    /// Extra JSON body fields flattened into OpenAI-compatible chat requests.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_body: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

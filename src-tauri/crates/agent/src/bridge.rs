@@ -244,6 +244,7 @@ fn convert_request(
             .and_then(|overrides| overrides.use_max_completion_tokens),
         thinking_param_style: model_param_overrides
             .and_then(|overrides| overrides.thinking_param_style.clone()),
+        extra_body: model_param_overrides.and_then(|overrides| overrides.extra_body.clone()),
     }
 }
 
@@ -495,6 +496,7 @@ mod tests {
             reasoning_profile: Some("siliconflow_enable_thinking".to_string()),
             reasoning_options: None,
             reasoning_default: None,
+            extra_body: None,
         }
     }
 

@@ -198,6 +198,7 @@ mod tests {
             reasoning_profile: None,
             use_max_completion_tokens: None,
             thinking_param_style: None,
+            extra_body: None,
         }
     }
 
