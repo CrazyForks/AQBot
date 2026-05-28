@@ -8,7 +8,7 @@ use std::pin::Pin;
 
 use crate::reasoning::{resolve_reasoning, ReasoningStyle};
 use crate::{
-    build_http_client, parse_base64_data_url, resolve_chat_url, ProviderAdapter,
+    build_http_client, parse_base64_data_url, resolve_chat_url, resolve_models_url, ProviderAdapter,
     ProviderRequestContext,
 };
 
@@ -786,7 +786,7 @@ impl ProviderAdapter for AnthropicAdapter {
     }
 
     async fn list_models(&self, ctx: &ProviderRequestContext) -> Result<Vec<Model>> {
-        let url = format!("{}/models", Self::base_url(ctx));
+        let url = resolve_models_url(&Self::base_url(ctx));
 
         let resp = crate::apply_request_headers(
             self.get_client(ctx)?

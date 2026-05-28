@@ -8,7 +8,10 @@ use serde_json::{Map, Value};
 use std::pin::Pin;
 
 use crate::reasoning::{resolve_reasoning, ReasoningStyle, ResolvedReasoning};
-use crate::{build_http_client, resolve_chat_url, ProviderAdapter, ProviderRequestContext};
+use crate::{
+    build_http_client, resolve_chat_url, resolve_models_url, ProviderAdapter,
+    ProviderRequestContext,
+};
 
 pub(crate) trait OpenAICompatPolicy: Clone + Send + Sync + 'static {
     fn default_base_url(&self) -> &'static str {
@@ -813,6 +816,7 @@ mod tests {
     use crate::siliconflow::SiliconFlowPolicy;
     use crate::xai::XAIPolicy;
     use serde_json::json;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn base_chat_request(model: &str) -> ChatRequest {
         ChatRequest {
@@ -853,6 +857,41 @@ mod tests {
         }
     }
 
+    async fn spawn_models_response() -> (std::net::SocketAddr, tokio::task::JoinHandle<String>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind test server");
+        let addr = listener.local_addr().expect("server addr");
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("accept request");
+            let mut request = Vec::new();
+            let mut buffer = [0u8; 1024];
+            loop {
+                let read = socket.read(&mut buffer).await.expect("read request");
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&buffer[..read]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let body = r#"{"data":[{"id":"gpt-test"}]}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            socket
+                .write_all(response.as_bytes())
+                .await
+                .expect("write response");
+
+            String::from_utf8_lossy(&request).into_owned()
+        });
+        (addr, server)
+    }
+
     #[test]
     fn convert_messages_omits_null_fields_for_openai_compatible_requests() {
         let messages = convert_messages(
@@ -889,6 +928,29 @@ mod tests {
                 }
             ]))
         );
+    }
+
+    #[tokio::test]
+    async fn list_models_uses_resolved_base_models_url() {
+        let (addr, server) = spawn_models_response().await;
+        let base_url =
+            crate::resolve_base_url_for_type(&format!("http://{}", addr), &ProviderType::OpenAI);
+        let ctx = ProviderRequestContext {
+            api_key: "sk-test".to_string(),
+            key_id: "key-1".to_string(),
+            provider_id: "provider-1".to_string(),
+            base_url: Some(base_url),
+            api_path: Some("/v1/chat/completions".to_string()),
+            proxy_config: None,
+            custom_headers: None,
+        };
+        let adapter = OpenAICompatAdapter::new(OpenAIPolicy);
+
+        let models = adapter.list_models(&ctx).await.expect("list models");
+        let request = server.await.expect("server request");
+
+        assert_eq!(models[0].model_id, "gpt-test");
+        assert!(request.starts_with("GET /v1/models HTTP/1.1"), "{request}");
     }
 
     #[test]
@@ -1640,7 +1702,7 @@ where
     }
 
     async fn list_models(&self, ctx: &ProviderRequestContext) -> Result<Vec<Model>> {
-        let url = format!("{}/models", self.base_url(ctx));
+        let url = resolve_models_url(&self.base_url(ctx));
 
         let resp = crate::apply_request_headers(
             self.get_client(ctx)?
@@ -1738,7 +1800,7 @@ where
             return Ok(true);
         }
         // Fallback: probe /models endpoint, valid key → 200/400, invalid → 401/403
-        let url = format!("{}/models", self.base_url(ctx));
+        let url = resolve_models_url(&self.base_url(ctx));
         let resp = crate::apply_request_headers(
             self.get_client(ctx)?
                 .get(&url)

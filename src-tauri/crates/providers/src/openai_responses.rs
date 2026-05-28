@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
 use crate::reasoning::{resolve_reasoning, ReasoningStyle};
-use crate::{build_http_client, resolve_chat_url, ProviderAdapter, ProviderRequestContext};
+use crate::{
+    build_http_client, resolve_chat_url, resolve_models_url, ProviderAdapter,
+    ProviderRequestContext,
+};
 
 const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
 
@@ -951,7 +954,7 @@ impl ProviderAdapter for OpenAIResponsesAdapter {
     }
 
     async fn list_models(&self, ctx: &ProviderRequestContext) -> Result<Vec<Model>> {
-        let url = format!("{}/models", Self::base_url(ctx));
+        let url = resolve_models_url(&Self::base_url(ctx));
 
         let resp = crate::apply_request_headers(
             self.get_client(ctx)?

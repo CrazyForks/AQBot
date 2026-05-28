@@ -116,6 +116,21 @@ const DEFAULT_HOSTS: Record<ProviderType, string> = {
   custom: '',
 };
 
+const DEFAULT_VERSIONS: Record<ProviderType, string> = {
+  openai: '/v1',
+  openai_responses: '/v1',
+  deepseek: '/v1',
+  xai: '/v1',
+  glm: '/v4',
+  siliconflow: '/v1',
+  anthropic: '/v1',
+  gemini: '/v1beta',
+  jina: '/v1',
+  cohere: '/v2',
+  voyage: '/v1',
+  custom: '/v1',
+};
+
 const REASONING_PROFILE_OPTIONS = [
   { value: 'reasoning_effort', label: '自动匹配（推荐）' },
   { value: 'openai_reasoning_effort', label: 'OpenAI Chat' },
@@ -401,12 +416,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
     const host = apiHostLocal || DEFAULT_HOSTS[providerType] || '';
     const path = apiPathLocal || DEFAULT_PATHS[providerType] || '';
 
-    // Default version path per provider type
-    const defaultVersion = providerType === 'gemini'
-      ? '/v1beta'
-      : providerType === 'cohere'
-        ? '/v2'
-        : '/v1';
+    const defaultVersion = DEFAULT_VERSIONS[providerType];
 
     // Check if URL ends with a versioned path like /v1, /v1beta, /v2, etc.
     const hasVersionSuffix = (url: string) => {
@@ -441,7 +451,9 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
       }
     }
 
-    return { resolvedBase, chatUrl };
+    const modelsUrl = `${resolvedBase.replace(/\/+$/, '')}/models`;
+
+    return { resolvedBase, chatUrl, modelsUrl };
   }, [apiHostLocal, apiPathLocal, provider?.provider_type]);
 
   const filteredModels = useMemo(
@@ -1181,6 +1193,9 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
             </Space.Compact>
             <div style={{ marginTop: 4, fontSize: 12, color: token.colorTextQuaternary }}>
               {t('settings.urlPreviewLabel')}{resolvedUrls.resolvedBase}
+            </div>
+            <div style={{ marginTop: 2, fontSize: 12, color: token.colorTextQuaternary }}>
+              {t('settings.modelsUrlPreviewLabel')}{resolvedUrls.modelsUrl}
             </div>
           </Form.Item>
           <Form.Item

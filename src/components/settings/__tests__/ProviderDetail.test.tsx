@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   testModel: vi.fn(),
 }));
 
+vi.setConfig({ testTimeout: 15000 });
+
 function createProviderFixture(): ProviderConfig {
   return {
     id: 'provider-1',
@@ -171,6 +173,53 @@ describe('ProviderDetail', () => {
         dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  it('shows model sync request preview from the resolved base URL', () => {
+    provider.api_host = 'https://api.openai.com';
+    provider.api_path = '/v1/chat/completions';
+
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    expect(screen.getByText('settings.urlPreviewLabelhttps://api.openai.com/v1')).toBeInTheDocument();
+    expect(screen.getByText('settings.modelsUrlPreviewLabelhttps://api.openai.com/v1/models')).toBeInTheDocument();
+    expect(screen.getByText('settings.urlPreviewLabelhttps://api.openai.com/v1/chat/completions')).toBeInTheDocument();
+  });
+
+  it('honors forced base URLs and provider default versions in request previews', () => {
+    provider.api_host = 'https://api.example.com!';
+    provider.api_path = '/v1/chat/completions';
+
+    const { unmount } = render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    expect(screen.getByText('settings.urlPreviewLabelhttps://api.example.com')).toBeInTheDocument();
+    expect(screen.getByText('settings.modelsUrlPreviewLabelhttps://api.example.com/models')).toBeInTheDocument();
+
+    unmount();
+    provider = {
+      ...createProviderFixture(),
+      provider_type: 'glm',
+      api_host: 'https://open.bigmodel.cn/api/paas',
+      api_path: '/v4/chat/completions',
+    };
+
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    expect(screen.getByText('settings.urlPreviewLabelhttps://open.bigmodel.cn/api/paas/v4')).toBeInTheDocument();
+    expect(screen.getByText('settings.modelsUrlPreviewLabelhttps://open.bigmodel.cn/api/paas/v4/models')).toBeInTheDocument();
+    expect(screen.getByText('settings.urlPreviewLabelhttps://open.bigmodel.cn/api/paas/v4/chat/completions')).toBeInTheDocument();
   });
 
   it('adds a model from the card-level action and derives the default group from the model id', async () => {

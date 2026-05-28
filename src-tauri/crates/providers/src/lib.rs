@@ -168,6 +168,11 @@ pub fn resolve_chat_url(
     }
 }
 
+/// Build the model-list URL from a resolved base URL.
+pub fn resolve_models_url(resolved_base: &str) -> String {
+    format!("{}/models", resolved_base.trim_end_matches('/'))
+}
+
 /// Extract the trailing version prefix from a URL (e.g. "/v1", "/v1beta").
 fn extract_version_prefix(url: &str) -> Option<String> {
     let last_seg = url.rsplit('/').next()?;
@@ -180,6 +185,29 @@ fn extract_version_prefix(url: &str) -> Option<String> {
         Some(format!("/{}", last_seg))
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_models_url_uses_resolved_base_url() {
+        let base = resolve_base_url_for_type("https://api.openai.com", &ProviderType::OpenAI);
+        assert_eq!(resolve_models_url(&base), "https://api.openai.com/v1/models");
+
+        let base = resolve_base_url_for_type("https://api.openai.com/v1", &ProviderType::OpenAI);
+        assert_eq!(resolve_models_url(&base), "https://api.openai.com/v1/models");
+
+        let base = resolve_base_url_for_type("https://api.example.com!", &ProviderType::OpenAI);
+        assert_eq!(resolve_models_url(&base), "https://api.example.com/models");
+
+        let base = resolve_base_url_for_type("https://open.bigmodel.cn/api/paas", &ProviderType::GLM);
+        assert_eq!(
+            resolve_models_url(&base),
+            "https://open.bigmodel.cn/api/paas/v4/models"
+        );
     }
 }
 
