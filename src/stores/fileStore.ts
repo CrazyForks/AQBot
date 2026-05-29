@@ -31,8 +31,10 @@ interface FileStoreState {
   error: string | null;
   search: string;
   sortKey: FileSortKey;
+  currentCategory: FileCategory | null;
 
   loadCategory: (category: FileCategory) => Promise<void>;
+  refreshCurrentCategory: () => Promise<void>;
   setSearch: (search: string) => void;
   setSortKey: (key: FileSortKey) => void;
   clearError: () => void;
@@ -47,9 +49,10 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
   error: null,
   search: '',
   sortKey: 'createdAt',
+  currentCategory: null,
 
   loadCategory: async (category: FileCategory) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, currentCategory: category });
     try {
       const { search, sortKey } = get();
       const args: Record<string, unknown> = { category, sort_key: sortKey };
@@ -60,6 +63,12 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
     } catch (e) {
       set({ error: String(e), loading: false });
     }
+  },
+
+  refreshCurrentCategory: async () => {
+    const category = get().currentCategory;
+    if (!category) return;
+    await get().loadCategory(category);
   },
 
   setSearch: (search: string) => set({ search }),
@@ -92,7 +101,7 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
 
   cleanupMissingEntry: async (entryId: string) => {
     const row = get().rows.find((r) => r.id === entryId);
-    if (!row) return;
+    if (!row || !row.missing) return;
     try {
       await invoke('cleanup_missing_files_page_entry', { entryId });
       set({ rows: get().rows.filter((r) => r.id !== entryId) });

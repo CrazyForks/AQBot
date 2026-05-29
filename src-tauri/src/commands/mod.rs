@@ -2,6 +2,7 @@ pub mod agent;
 pub mod artifacts;
 pub mod backup;
 pub mod branches;
+pub mod cherry_import;
 pub mod context_sources;
 pub mod conversation_categories;
 pub mod conversations;

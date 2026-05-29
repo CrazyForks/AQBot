@@ -1,15 +1,19 @@
-import { Button, Divider, Popconfirm, Typography, App } from 'antd';
-import { Share2, Upload, Trash2, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { App, Button, Divider, Popconfirm, Typography } from 'antd';
+import { Share2, Upload, Trash2, AlertTriangle, FileArchive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useConversationStore, useSettingsStore } from '@/stores';
+import { useConversationStore, useProviderStore, useSettingsStore } from '@/stores';
+import { useFileStore } from '@/stores/fileStore';
 import { isTauri } from '@/lib/invoke';
 import { SettingsGroup } from './SettingsGroup';
+import { CherryStudioImportModal } from './CherryStudioImportModal';
 
 const { Text } = Typography;
 
 export function DataManager() {
   const { t } = useTranslation();
   const { message } = App.useApp();
+  const [cherryImportOpen, setCherryImportOpen] = useState(false);
 
   const handleExport = async () => {
     try {
@@ -133,6 +137,14 @@ export function DataManager() {
           </Button>
         </div>
       </SettingsGroup>
+      <SettingsGroup title={t('settings.groupThirdPartyImport')}>
+        <div style={rowStyle} className="flex items-center justify-between">
+          <span>{t('settings.cherryImport.source')}</span>
+          <Button icon={<FileArchive size={16} />} onClick={() => setCherryImportOpen(true)}>
+            {t('settings.cherryImport.action')}
+          </Button>
+        </div>
+      </SettingsGroup>
       <SettingsGroup
         title={
           <Text type="danger">
@@ -156,6 +168,15 @@ export function DataManager() {
           </Popconfirm>
         </div>
       </SettingsGroup>
+      <CherryStudioImportModal
+        open={cherryImportOpen}
+        onClose={() => setCherryImportOpen(false)}
+        onImported={() => {
+          void useConversationStore.getState().fetchConversations?.();
+          void useProviderStore.getState().fetchProviders?.();
+          void useFileStore.getState().refreshCurrentCategory();
+        }}
+      />
     </div>
   );
 }

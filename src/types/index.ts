@@ -107,6 +107,35 @@ export interface ProviderImportBatchResult {
   provider_ids: string[];
 }
 
+export interface CherryStudioImportWarning {
+  code: string;
+  message: string;
+  sourceId: string | null;
+}
+
+export interface CherryStudioImportSummary {
+  conversationCount: number;
+  messageCount: number;
+  fileCount: number;
+  importableProviderCount: number;
+  skippedEmptyTopicCount: number;
+  duplicateConversationCount: number;
+  warnings: CherryStudioImportWarning[];
+}
+
+export interface CherryStudioImportOptions {
+  importProviderKeys: boolean;
+}
+
+export interface CherryStudioImportResult {
+  importedConversationCount: number;
+  importedMessageCount: number;
+  importedFileCount: number;
+  importedProviderCount: number;
+  skippedDuplicateConversationCount: number;
+  warnings: CherryStudioImportWarning[];
+}
+
 // === Model System ===
 export type ModelCapability = 'TextChat' | 'Vision' | 'FunctionCalling' | 'Reasoning' | 'RealtimeVoice';
 export type ModelType = 'Chat' | 'Voice' | 'Embedding' | 'Image' | 'Rerank';
