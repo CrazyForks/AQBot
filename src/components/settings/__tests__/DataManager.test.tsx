@@ -94,4 +94,19 @@ describe('DataManager', () => {
 
     expect(screen.getByText('settings.kelivoImport.title')).toBeInTheDocument();
   });
+
+  it('exposes ChatGPT export import from third-party data import settings', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <App>
+        <DataManager />
+      </App>,
+    );
+
+    expect(screen.getByText('settings.chatgptImport.source')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'settings.chatgptImport.action' }));
+
+    expect(screen.getByText('settings.chatgptImport.title')).toBeInTheDocument();
+  });
 });

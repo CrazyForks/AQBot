@@ -951,6 +951,18 @@
       "emptyTopics": "{{count}} empty topics will be skipped",
       "success": "Kelivo backup imported"
     },
+    "chatgptImport": {
+      "source": "ChatGPT official export",
+      "action": "Import ChatGPT",
+      "title": "Import ChatGPT official export",
+      "selectFile": "Select export file",
+      "preview": "Import Preview",
+      "conversations": "Conversations",
+      "messages": "Messages",
+      "emptyConversations": "Empty",
+      "duplicates": "Duplicates",
+      "success": "ChatGPT export imported"
+    },
     "clearSuccess": "Data cleared",
     "clearDataConfirmTitle": "Confirm Clear Data",
     "clearDataConfirmContent": "This will clear all conversation history. This action cannot be undone. Settings and app configurations will be preserved.",

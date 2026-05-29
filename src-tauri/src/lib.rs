@@ -390,6 +390,8 @@ pub fn run() {
         commands::backup::update_backup_settings,
         commands::cherry_import::scan_cherry_studio_import,
         commands::cherry_import::import_cherry_studio_backup,
+        commands::chatgpt_import::scan_chatgpt_import,
+        commands::chatgpt_import::import_chatgpt_export,
         commands::kelivo_import::scan_kelivo_import,
         commands::kelivo_import::import_kelivo_backup,
         // webdav

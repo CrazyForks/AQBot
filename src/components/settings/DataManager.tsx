@@ -7,6 +7,7 @@ import { useFileStore } from '@/stores/fileStore';
 import { isTauri } from '@/lib/invoke';
 import { SettingsGroup } from './SettingsGroup';
 import { CherryStudioImportModal } from './CherryStudioImportModal';
+import { ChatGptImportModal } from './ChatGptImportModal';
 import { KelivoImportModal } from './KelivoImportModal';
 
 const { Text } = Typography;
@@ -15,6 +16,7 @@ export function DataManager() {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const [cherryImportOpen, setCherryImportOpen] = useState(false);
+  const [chatgptImportOpen, setChatgptImportOpen] = useState(false);
   const [kelivoImportOpen, setKelivoImportOpen] = useState(false);
 
   const handleExport = async () => {
@@ -153,6 +155,13 @@ export function DataManager() {
             {t('settings.kelivoImport.action')}
           </Button>
         </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div style={rowStyle} className="flex items-center justify-between">
+          <span>{t('settings.chatgptImport.source')}</span>
+          <Button icon={<FileArchive size={16} />} onClick={() => setChatgptImportOpen(true)}>
+            {t('settings.chatgptImport.action')}
+          </Button>
+        </div>
       </SettingsGroup>
       <SettingsGroup
         title={
@@ -184,6 +193,13 @@ export function DataManager() {
           void useConversationStore.getState().fetchConversations?.();
           void useProviderStore.getState().fetchProviders?.();
           void useFileStore.getState().refreshCurrentCategory();
+        }}
+      />
+      <ChatGptImportModal
+        open={chatgptImportOpen}
+        onClose={() => setChatgptImportOpen(false)}
+        onImported={() => {
+          void useConversationStore.getState().fetchConversations?.();
         }}
       />
       <KelivoImportModal

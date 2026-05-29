@@ -141,6 +141,27 @@ export type CherryStudioImportSummary = ThirdPartyImportSummary;
 export type CherryStudioImportOptions = ThirdPartyImportOptions;
 export type CherryStudioImportResult = ThirdPartyImportResult;
 
+export interface ChatGptImportWarning {
+  code: string;
+  message: string;
+  sourceId: string | null;
+}
+
+export interface ChatGptImportSummary {
+  conversationCount: number;
+  messageCount: number;
+  skippedEmptyConversationCount: number;
+  duplicateConversationCount: number;
+  warnings: ChatGptImportWarning[];
+}
+
+export interface ChatGptImportResult {
+  importedConversationCount: number;
+  importedMessageCount: number;
+  skippedDuplicateConversationCount: number;
+  warnings: ChatGptImportWarning[];
+}
+
 // === Model System ===
 export type ModelCapability = 'TextChat' | 'Vision' | 'FunctionCalling' | 'Reasoning' | 'RealtimeVoice';
 export type ModelType = 'Chat' | 'Voice' | 'Embedding' | 'Image' | 'Rerank';

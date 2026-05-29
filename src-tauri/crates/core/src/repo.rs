@@ -1,5 +1,6 @@
 pub mod artifact;
 pub mod backup;
+pub mod chatgpt_import;
 pub mod cherry_import;
 pub mod kelivo_import;
 pub mod cli_config;

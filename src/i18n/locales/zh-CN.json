@@ -951,6 +951,18 @@
       "emptyTopics": "将跳过 {{count}} 个空会话",
       "success": "Kelivo 备份导入完成"
     },
+    "chatgptImport": {
+      "source": "ChatGPT 官方导出",
+      "action": "导入 ChatGPT",
+      "title": "导入 ChatGPT 官方导出",
+      "selectFile": "选择导出文件",
+      "preview": "导入预览",
+      "conversations": "会话",
+      "messages": "消息",
+      "emptyConversations": "空会话",
+      "duplicates": "重复",
+      "success": "ChatGPT 导出导入完成"
+    },
     "clearSuccess": "数据已清除",
     "clearDataConfirmTitle": "确认清除数据",
     "clearDataConfirmContent": "此操作将清除所有对话记录，不可撤销。设置和应用配置将保留。",
