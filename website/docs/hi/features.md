@@ -1,104 +1,52 @@
-# विशेषताएं
+# विशेषताएँ
 
-AQBot एक पूर्ण-सुविधा वाला डेस्कटॉप AI असिस्टेंट है जो मल्टी-प्रोवाइडर चैट, शक्तिशाली कंटेंट रेंडरिंग, टूल इंटीग्रेशन और एक बिल्ट-इन API गेटवे को एक साथ लाता है — सब कुछ मजबूत डेटा सुरक्षा के साथ लोकल रूप से चलता है।
+AQBot एक local-first AI desktop workspace है। यह पेज v0.0.85 के लिए provider import, third-party data import, MCP, HTML rendering, backup और gateway क्षमताओं के साथ अपडेट किया गया है।
 
 ## चैट और मॉडल
 
-एकल, एकीकृत इंटरफ़ेस से प्रमुख AI प्रोवाइडरों से कनेक्ट करें।
-
-- **मल्टी-प्रोवाइडर सपोर्ट** — OpenAI, Anthropic Claude, Google Gemini और सभी OpenAI-कम्पैटिबल API के साथ कम्पैटिबल।
-- **प्रदाता इंपोर्ट लिंक** — प्रदाता वेबसाइट या डैशबोर्ड `aqbot://` लिंक से AQBot खोल सकते हैं और उपयोगकर्ता पुष्टि के बाद नाम, Base URL, API key और प्रदाता प्रकार अपने-आप भर सकते हैं। देखें [प्रदाता कॉन्फ़िगर करें](./guide/providers)।
-- **मॉडल मैनेजमेंट** — रिमोट मॉडल लिस्ट ऑटोमैटिकली फ़ेच करें और प्रति वार्तालाप जनरेशन पैरामीटर कस्टमाइज़ करें।
-- **मल्टी-की रोटेशन** — रेट लिमिट दबाव वितरित करने के लिए प्रति प्रोवाइडर कई API कीज़ कॉन्फ़िगर करें।
-- **स्ट्रीमिंग आउटपुट** — रियल-टाइम टोकन-दर-टोकन रेंडरिंग। मॉडल के रीज़निंग की जांच के लिए कोलैप्सिबल थिंकिंग ब्लॉक्स।
-- **मैसेज वर्जन** — हर रेस्पॉन्स के कई वर्जन हो सकते हैं। अलग-अलग मॉडल या पैरामीटर सेटिंग्स के प्रभावों की तुलना करें।
-- **वार्तालाप ब्रांचिंग** — किसी भी मैसेज नोड से नई ब्रांच बनाएं। साइड-बाय-साइड ब्रांच तुलना दृश्य।
-- **वार्तालाप प्रबंधन** — महत्वपूर्ण वार्तालाप पिन करें, पुराने आर्काइव करें, समय-समूहीकृत इतिहास ब्राउज़ करें।
-- **वार्तालाप संपीड़न** — लंबी वार्तालाप को स्वचालित रूप से संपीड़ित करें, महत्वपूर्ण जानकारी संरक्षित करते हुए।
-- **मल्टी-मॉडल एक साथ रेस्पॉन्स** — एक ही प्रश्न एक साथ कई मॉडलों को पूछें और साइड-बाय-साइड उत्तर तुलना करें।
+- **Multi-provider chat** — OpenAI, Claude, Gemini, DeepSeek, Qwen और OpenAI-compatible endpoints को Base URL, API Path, headers और proxy rules के साथ जोड़ें।
+- **Provider onboarding** — aqbot:// provider links और CC Switch import से user confirmation के बाद provider profiles AQBot में लाएं।
+- **Model management** — Remote model lists sync करें, groups व्यवस्थित करें, latency test करें और capabilities, context length, sampling defaults, reasoning profiles तथा per-model extra_body सेट करें।
+- **Conversation workflows** — Streaming replies, thinking blocks, message versions, branches, title-generation status, long chat compression और multi-model comparison।
 
 ## AI Agent
 
-AQBot में एक बिल्ट-इन Agent मोड शामिल है जो AI को सूक्ष्म अनुमति नियंत्रण के साथ स्वायत्त रूप से बहु-चरणीय कार्य निष्पादित करने में सक्षम बनाता है।
+- **Agent mode** — Model controlled desktop workflow में files edit, commands run और code analysis कर सकता है।
+- **Permission control** — Standard review, auto-accept edits या full-access mode चुनें, working-directory sandbox checks active रहते हैं।
+- **Approval और cost UI** — Tool calls real time में review करें, allow decisions याद रखें और हर session का token/cost track करें।
 
-- **Agent मोड** — किसी भी वार्तालाप को Agent मोड में स्विच करें। AI फ़ाइलें पढ़ और लिख सकता है, शेल कमांड चला सकता है, कोड विश्लेषण कर सकता है, और जटिल बहु-चरणीय वर्कफ़्लो निष्पादित कर सकता है — सब कुछ नियंत्रित वातावरण में
-- **तीन अनुमति स्तर** — अपने वर्कफ़्लो के लिए सही सुरक्षा स्तर चुनें:
-  - **डिफ़ॉल्ट** — पढ़ने की क्रियाएं स्वचालित रूप से स्वीकृत; लिखना और कमांड निष्पादन के लिए उपयोगकर्ता की स्पष्ट स्वीकृति आवश्यक
-  - **संपादन स्वीकार करें** — फ़ाइल पढ़ना/लिखना स्वचालित रूप से स्वीकृत; कमांड निष्पादन के लिए अभी भी स्वीकृति आवश्यक
-  - **पूर्ण पहुँच** — सभी क्रियाएं बिना संकेत के आगे बढ़ती हैं (पथ सुरक्षा जांच सक्रिय रहती है)
-- **कार्य निर्देशिका सैंडबॉक्स** — Agent की सभी फ़ाइल क्रियाएं निर्दिष्ट कार्य निर्देशिका तक सख्ती से सीमित। पथ ट्रैवर्सल, सिमलिंक एस्केप, और सैंडबॉक्स के बाहर पहुँच सिस्टम स्तर पर अवरुद्ध
-- **टूल अनुमोदन पैनल** — प्रत्येक टूल कॉल पैरामीटर के साथ रीयल-टाइम में प्रदर्शित। प्रत्येक अनुरोध की व्यक्तिगत समीक्षा, "हमेशा अनुमति दें" क्लिक करके निर्णय याद रखें, या अविश्वसनीय संचालन अस्वीकार करें
-- **लागत ट्रैकिंग** — प्रत्येक Agent सत्र के लिए टोकन उपयोग और अनुमानित USD लागत का रीयल-टाइम निगरानी
+## सामग्री रेंडरिंग
 
-::: tip Beta विशेषता
-Agent मोड वर्तमान में Beta में है। यह open-agent-sdk के माध्यम से OpenAI, Anthropic और Gemini मॉडल का समर्थन करता है।
-:::
+- **Markdown और math** — Streaming conversations में Markdown, code highlighting, tables, task lists और LaTeX formulas render करें।
+- **Code, diagrams और Artifact** — Monaco code blocks, Mermaid, D2 और Artifact panel से code, Markdown notes, reports और previews देखें।
+- **HTML fragments** — Generated HTML fragments सुरक्षित preview करें, हाल के streaming stability fixes के साथ।
 
-## कंटेंट रेंडरिंग
+## खोज और ज्ञान
 
-AQBot एक समृद्ध, इंटरैक्टिव रेंडरिंग पाइपलाइन के साथ प्लेन टेक्स्ट चैट से बहुत आगे जाता है।
+- **Web search** — Tavily, Zhipu WebSearch, Bocha आदि cited sources और generated search queries के साथ।
+- **Local knowledge base** — sqlite-vec से private documents index करें, retrieval/rerank options tune करें और retrieval feedback देखें।
+- **Context management** — Files, search results, knowledge snippets, memories और tool output को conversation context में जोड़ें।
 
-- **Markdown रेंडरिंग** — सिंटैक्स-हाइलाइटेड कोड ब्लॉक, LaTeX मैथ फॉर्मूला, टेबल और टास्क लिस्ट के लिए पूर्ण सपोर्ट।
-- **Monaco कोड एडिटर** — कोड ब्लॉक Monaco एडिटर (VS Code का इंजन) को एम्बेड करता है।
-- **डायग्राम रेंडरिंग** — Mermaid फ्लोचार्ट और D2 आर्किटेक्चर डायग्राम के लिए बिल्ट-इन रेंडरिंग।
-- **Artifact पैनल** — कोड स्निपेट, HTML ड्राफ्ट, Markdown नोट्स और रिपोर्ट एक समर्पित साइड पैनल में खोले जा सकते हैं।
-- **रियल-टाइम वॉयस चैट** — (जल्द आएगा) OpenAI Realtime API द्वारा संचालित WebRTC-आधारित वॉयस वार्तालाप।
+## टूल और एक्सटेंशन
 
-## सर्च और ज्ञान
+- **MCP protocol** — stdio, SSE या StreamableHTTP transport वाले Model Context Protocol servers चलाएं।
+- **Built-in tools** — @aqbot/fetch और file search जैसे built-in MCP tools बिना अलग server के उपयोग करें।
+- **Tool loop limit** — MCP tool-call loop count सेट करें और interrupted/stuck tool sessions से बेहतर recover करें।
 
-लाइव वेब डेटा, लोकल दस्तावेज़ों और स्थायी मेमोरी से वार्तालाप को समृद्ध करें।
+## API gateway
 
-- **वेब सर्च** — Tavily, Zhipu WebSearch, Bocha और अधिक के साथ एकीकरण।
-- **लोकल नॉलेज बेस (RAG)** — कई नॉलेज बेस सपोर्ट करता है। दस्तावेज़ अपलोड करें ऑटोमैटिक पार्सिंग, चंकिंग और वेक्टर इंडेक्सिंग (sqlite-vec) के लिए।
-- **मेमोरी सिस्टम** — मल्टी-नेमस्पेस वार्तालाप मेमोरी सपोर्ट करता है। एंट्री मैन्युअल या AI द्वारा ऑटोमैटिक रूप से जोड़ी जा सकती हैं (जल्द आएगा)।
-- **कॉन्टेक्स्ट मैनेजमेंट** — फ़ाइल अटैचमेंट, सर्च परिणाम, नॉलेज बेस पैसेज और टूल आउटपुट किसी भी मैसेज में अटैच करें।
+- **Local gateway** — Desktop app से OpenAI Chat Completions, OpenAI Responses, Claude-native और Gemini-native endpoints expose करें।
+- **Access और observability** — Gateway keys, SSL/TLS certificates, request logs और usage analytics local रूप से manage करें।
+- **Client templates** — Claude Code, Codex CLI, OpenCode, Gemini CLI और custom clients के ready templates।
 
-::: tip जल्द आएगा
-AI-पावर्ड ऑटोमैटिक मेमोरी एक्सट्रैक्शन सक्रिय विकास में है।
-:::
+## Data import और backup
 
-## टूल्स और एक्सटेंशन
+- **Third-party imports** — ChatGPT official exports, Cherry Studio backups और Kelivo backups preview counts, warnings और duplicate handling के साथ import करें।
+- **Provider और file migration** — Cherry Studio/Kelivo import linked providers, API keys और file attachments optionally migrate कर सकता है।
+- **Backups** — Local folders, WebDAV या S3-compatible storage से backup और restore करें।
 
-बाहरी टूल्स के साथ मॉडल की क्षमताओं का विस्तार करें।
+## Desktop और security
 
-- **MCP प्रोटोकॉल** — **stdio** और **HTTP** ट्रांसपोर्ट दोनों को सपोर्ट करने वाला पूर्ण [Model Context Protocol](https://modelcontextprotocol.io/) कार्यान्वयन।
-- **बिल्ट-इन टूल्स** — `@aqbot/fetch` जैसे रेडी-टू-यूज़ बिल्ट-इन MCP टूल्स।
-- **टूल एक्सीक्यूशन पैनल** — एक विज़ुअल पैनल हर टूल-कॉल रिक्वेस्ट और उसका रिटर्न रिजल्ट दिखाता है।
-
-## API गेटवे
-
-AQBot में एक बिल्ट-इन लोकल API सर्वर शामिल है जो आपके डेस्कटॉप ऐप को एक शक्तिशाली AI गेटवे में बदल देता है।
-
-- **लोकल API गेटवे** — OpenAI-कम्पैटिबल, Claude और Gemini इंटरफेस के लिए नेटिव सपोर्ट के साथ लोकल सर्वर एक्सपोज़ करें।
-- **API की मैनेजमेंट** — एक्सेस कीज़ जनरेट, रिवोक और एनेबल या डिसेबल करें।
-- **उपयोग विश्लेषण** — की, प्रोवाइडर और तारीख के अनुसार रिक्वेस्ट वॉल्यूम और टोकन उपयोग का विश्लेषण करें।
-- **SSL/TLS सपोर्ट** — कस्टम सर्टिफिकेट इम्पोर्ट सपोर्ट के साथ बिल्ट-इन सेल्फ-साइन्ड सर्टिफिकेट जनरेशन।
-- **रिक्वेस्ट लॉग** — गेटवे से गुजरने वाले हर API रिक्वेस्ट और रेस्पॉन्स का पूर्ण रिकॉर्ड।
-- **कॉन्फ़िगरेशन टेम्पलेट** — Claude Code, Codex CLI, OpenCode और Gemini CLI के लिए प्री-बिल्ट इंटीग्रेशन टेम्पलेट।
-
-## डेटा और सुरक्षा
-
-आपका डेटा कभी आपकी मशीन नहीं छोड़ता।
-
-- **AES-256 एन्क्रिप्शन** — API कीज़ और अन्य संवेदनशील डेटा AES-256 से लोकल रूप से एन्क्रिप्ट किए जाते हैं।
-- **आइसोलेटेड डेटा डायरेक्टरी** — ऐप्लिकेशन स्टेट `~/.aqbot/` में। यूज़र-विज़िबल फ़ाइलें `~/Documents/aqbot/` में।
-- **ऑटो बैकअप** — लोकल डायरेक्टरी या WebDAV स्टोरेज में ऑटोमैटिक बैकअप शेड्यूल करें।
-- **बैकअप रिस्टोर** — किसी भी हिस्टोरिकल बैकअप से एक क्लिक में रिस्टोर करें।
-- **वार्तालाप एक्सपोर्ट** — PNG, Markdown, प्लेन टेक्स्ट या JSON के रूप में वार्तालाप एक्सपोर्ट करें।
-
-::: warning अपनी मास्टर की सुरक्षित रखें
-फ़ाइल `~/.aqbot/master.key` AQBot में सभी एन्क्रिप्शन की जड़ है। इसे सुरक्षित रखें और अपने बैकअप में शामिल करें।
-:::
-
-## डेस्कटॉप अनुभव
-
-AQBot एक नेटिव डेस्कटॉप ऐप्लिकेशन के रूप में बनाया गया है।
-
-- **थीम स्विचिंग** — डार्क और लाइट थीम जो सिस्टम प्रेफरेंस का पालन करते हैं या मैन्युअल रूप से सेट किए जा सकते हैं।
-- **इंटरफेस भाषा** — हिंदी, सरलीकृत चीनी और अंग्रेजी का पूर्ण सपोर्ट।
-- **सिस्टम ट्रे** — विंडो बंद करने पर सिस्टम ट्रे में मिनिमाइज़ करें।
-- **हमेशा ऊपर** — मेन विंडो को सभी अन्य विंडो के ऊपर पिन करें।
-- **ग्लोबल शॉर्टकट** — कहीं से भी मेन विंडो बुलाने के लिए कस्टमाइज़ेबल ग्लोबल कीबोर्ड शॉर्टकट।
-- **ऑटो-स्टार्ट** — सिस्टम स्टार्टअप पर AQBot को वैकल्पिक रूप से लॉन्च करें।
-- **प्रॉक्सी सपोर्ट** — सीमित नेटवर्क एक्सेस वाले वातावरण के लिए HTTP और SOCKS5 प्रॉक्सी कॉन्फ़िगर करें।
-- **ऑटो अपडेट** — AQBot स्टार्टअप पर नए वर्जन की जांच करता है।
+- **Local encryption** — App state ~/.aqbot/ में, user files ~/Documents/aqbot/ में, API keys AES-256 और local master key से protected।
+- **Desktop integration** — Tray, always-on-top, global shortcuts, auto-start, proxy settings और automatic update checks।
+- **11 interface languages** — Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German, Spanish, Russian, Hindi और Arabic में switch करें।

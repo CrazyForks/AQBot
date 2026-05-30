@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — ओपन-सोर्स AI डेस्कटॉप क्लाइंट & गेटवे
+title: "AQBot — open-source AI desktop client और gateway"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot एक मुफ्त ओपन-सोर्स AI डेस्कटॉप क्लाइंट है जिसमें बिल्ट-इन AI गेटवे है। OpenAI, Claude, Gemini, DeepSeek और अधिक LLMs कनेक्ट करें। MCP सर्वर सपोर्ट, नॉलेज बेस, प्राइवेसी-फर्स्ट।
+      content: "AQBot एक free open-source AI desktop client है जिसमें multi-model chat, Agent, MCP, ChatGPT/Cherry Studio/Kelivo import, local RAG, S3/WebDAV backup और built-in AI gateway है।"
 
 hero:
   name: AQBot
-  text: आपका AI डेस्कटॉप असिस्टेंट
-  tagline: मल्टी-मॉडल चैट, MCP टूल्स, API गेटवे, नॉलेज बेस — सब एक ओपन-सोर्स क्लाइंट में
+  text: "आपका AI desktop workspace"
+  tagline: "Multi-model chat, Agent, MCP tools, API gateway, imports, knowledge base और backups एक local-first client में"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: शुरू करें
+      text: "Quick Start"
       link: /hi/guide/getting-started
     - theme: alt
-      text: डाउनलोड करें
+      text: "डाउनलोड"
       link: /hi/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: मल्टी-मॉडल चैट
-    details: OpenAI, Claude, Gemini, DeepSeek, Qwen और किसी भी कम्पैटिबल API से कनेक्ट करें। मल्टी-की रोटेशन, स्ट्रीमिंग आउटपुट, थिंकिंग ब्लॉक्स।
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: Agent मोड से स्वायत्त कार्य निष्पादन। फ़ाइलें पढ़ना/लिखना, कमांड चलाना, कोड विश्लेषण — तीन अनुमति स्तर + कार्य निर्देशिका सैंडबॉक्स।
+    title: "Multi-model chat"
+    details: "OpenAI, Claude, Gemini, DeepSeek, Qwen और compatible APIs with key rotation, branches, compression और multi-model answers।"
   - icon: api
-    title: MCP टूल कॉलिंग
-    details: Model Context Protocol का पूर्ण कार्यान्वयन। stdio, SSE, StreamableHTTP सपोर्ट। एक क्लिक में बाहरी टूल्स कनेक्ट करें। @aqbot/fetch जैसे बिल्ट-इन MCP टूल्स।
-  - icon: cloud-server
-    title: बिल्ट-इन API गेटवे
-    details: लोकल OpenAI-कम्पैटिबल API सर्वर। AQBot को Claude Code, Codex, Gemini CLI आदि के बैकएंड के रूप में उपयोग करें। की मैनेजमेंट, रेट लिमिटिंग, SSL/TLS।
-  - icon: book
-    title: नॉलेज बेस & RAG
-    details: sqlite-vec के साथ लोकल वेक्टर एम्बेडिंग। आपके प्राइवेट दस्तावेज़ों पर आधारित AI उत्तर — डेटा कभी आपकी मशीन नहीं छोड़ता।
-  - icon: search
-    title: वेब सर्च
-    details: Tavily, Zhipu WebSearch, Bocha एकीकरण। उद्धरण स्रोतों के साथ सर्च परिणाम वार्तालाप संदर्भ में इंजेक्ट होते हैं।
+    title: "Provider setup"
+    details: "aqbot:// provider links, CC Switch import, custom headers, proxy settings, OpenAI Responses और per-model extra_body।"
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "File edits, commands और code analysis with permission levels, working-directory sandboxing, approval UI और cost tracking।"
   - icon: edit
-    title: रिच कंटेंट रेंडरिंग
-    details: Markdown, LaTeX, Mermaid डायग्राम, D2 आर्किटेक्चर डायग्राम, diff प्रीव्यू के साथ Monaco कोड एडिटर, Artifact पैनल।
-  - icon: desktop
-    title: डेस्कटॉप अनुभव
-    details: ग्लोबल शॉर्टकट, सिस्टम ट्रे, ऑटो-स्टार्ट, हमेशा ऊपर, डार्क/लाइट थीम, प्रॉक्सी सपोर्ट।
+    title: "Rich rendering"
+    details: "Markdown, LaTeX, Mermaid, D2, Monaco code blocks, HTML fragments और Artifact previews।"
+  - icon: search
+    title: "Search और RAG"
+    details: "Web search with citations, query generation, local sqlite-vec knowledge bases, rerank settings और retrieval feedback।"
+  - icon: cloud-server
+    title: "API gateway"
+    details: "Local OpenAI-compatible, OpenAI Responses, Claude और Gemini endpoints for Claude Code, Codex, OpenCode और custom tools।"
+  - icon: book
+    title: "Data import"
+    details: "ChatGPT official exports, Cherry Studio backups और Kelivo backups duplicate handling और optional provider migration के साथ।"
   - icon: lock
-    title: प्राइवेसी & सुरक्षा
-    details: सभी डेटा लोकल में संग्रहीत। AES-256 से एन्क्रिप्टेड API कीज़। लोकल या WebDAV पर ऑटो बैकअप। PNG/Markdown/JSON के रूप में वार्तालाप एक्सपोर्ट।
+    title: "Backup और security"
+    details: "AES-256 encrypted local storage, dual-root data layout, local/WebDAV/S3 backups और restore workflows।"
+  - icon: desktop
+    title: "Desktop experience"
+    details: "11 interface languages, tray mode, always-on-top, global shortcuts, auto-start, proxy support और auto-update checks।"
 ---

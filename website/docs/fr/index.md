@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — Client de bureau IA open-source & Passerelle
+title: "AQBot — Client IA de bureau open-source & passerelle"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot est un client de bureau IA gratuit et open-source avec passerelle IA intégrée. Connectez OpenAI, Claude, Gemini, DeepSeek et d'autres LLMs. Support serveur MCP, base de connaissances, confidentialité d'abord.
+      content: "AQBot est un client IA de bureau gratuit et open-source avec chat multi-modèles, Agent, MCP, import ChatGPT/Cherry Studio/Kelivo, RAG local, sauvegarde S3/WebDAV et passerelle IA intégrée."
 
 hero:
   name: AQBot
-  text: Votre assistant IA de bureau
-  tagline: Chat multi-modèles, outils MCP, passerelle API, base de connaissances — tout en un seul client open-source
+  text: "Votre espace de travail IA de bureau"
+  tagline: "Chat multi-modèles, Agent, outils MCP, passerelle API, imports, base de connaissances et sauvegardes dans un client local-first"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: Commencer
+      text: "Démarrage rapide"
       link: /fr/guide/getting-started
     - theme: alt
-      text: Télécharger
+      text: "Télécharger"
       link: /fr/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: Chat multi-modèles
-    details: Connectez-vous à OpenAI, Claude, Gemini, DeepSeek, Qwen et toute API compatible. Rotation de clés multiples, sortie en streaming, blocs de réflexion.
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: Mode Agent pour l'exécution autonome de tâches. Lecture/écriture de fichiers, exécution de commandes, analyse de code — trois niveaux de permissions + sandbox de répertoire de travail.
+    title: "Chat et modèles"
+    details: "Connectez OpenAI, Claude, Gemini, DeepSeek, Qwen et tout endpoint compatible OpenAI avec Base URL, API Path, headers et proxy."
   - icon: api
-    title: Appel d'outils MCP
-    details: Implémentation complète du Model Context Protocol. Support stdio, SSE, StreamableHTTP. Connectez des outils externes en un clic. Outils MCP intégrés comme @aqbot/fetch.
-  - icon: cloud-server
-    title: Passerelle API intégrée
-    details: Serveur API local compatible OpenAI. Utilisez AQBot comme backend pour Claude Code, Codex, Gemini CLI et plus. Gestion des clés, limitation de débit, SSL/TLS.
-  - icon: book
-    title: Base de connaissances & RAG
-    details: Embeddings vectoriels locaux avec sqlite-vec. Réponses IA basées sur vos documents privés — les données ne quittent jamais votre machine.
-  - icon: search
-    title: Recherche web
-    details: Intégration Tavily, Zhipu WebSearch, Bocha. Résultats de recherche avec sources de citation injectés dans le contexte de conversation.
+    title: "Configuration fournisseurs"
+    details: "Utilisez les liens aqbot:// et l’import CC Switch pour importer des profils fournisseur après confirmation."
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "Le modèle peut éditer des fichiers, exécuter des commandes et analyser du code dans un workflow contrôlé."
   - icon: edit
-    title: Rendu de contenu riche
-    details: Markdown, LaTeX, diagrammes Mermaid, diagrammes d'architecture D2, éditeur Monaco avec aperçu diff, panneaux Artifact.
-  - icon: desktop
-    title: Expérience bureau
-    details: Raccourcis globaux, barre système, démarrage automatique, toujours visible, thèmes sombre/clair, support proxy.
+    title: "Rendu de contenu"
+    details: "Rendu Markdown, code, tableaux, tâches et LaTeX dans les conversations streamées."
+  - icon: search
+    title: "Recherche et connaissances"
+    details: "Tavily, Zhipu WebSearch, Bocha avec sources citées et génération de requêtes."
+  - icon: cloud-server
+    title: "Passerelle API"
+    details: "Exposez OpenAI Chat Completions, OpenAI Responses, Claude natif et Gemini natif depuis l’app."
+  - icon: book
+    title: "Import et sauvegarde"
+    details: "Importez ChatGPT, Cherry Studio et Kelivo avec aperçu, avertissements et gestion des doublons."
   - icon: lock
-    title: Confidentialité & Sécurité
-    details: Toutes les données stockées localement. Clés API chiffrées AES-256. Sauvegarde automatique locale ou WebDAV. Export de conversation en PNG/Markdown/JSON.
+    title: "Bureau et sécurité"
+    details: "État dans ~/.aqbot/, fichiers utilisateur dans ~/Documents/aqbot/, clés API protégées par AES-256."
+  - icon: desktop
+    title: "Bureau et sécurité"
+    details: "État dans ~/.aqbot/, fichiers utilisateur dans ~/Documents/aqbot/, clés API protégées par AES-256."
 ---

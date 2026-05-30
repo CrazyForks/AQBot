@@ -1,44 +1,57 @@
 ---
 layout: home
-title: AQBot — Open-source AI Desktop Client & Gateway
+title: "AQBot — Open-source AI Desktop Client & Gateway"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot is a free, open-source AI desktop client with built-in AI gateway. Connect OpenAI, Claude, Gemini, DeepSeek and more LLMs. MCP server support, knowledge base, privacy-first.
+      content: "AQBot is a free, open-source AI desktop client with multi-model chat, Agent mode, MCP tools, ChatGPT/Cherry Studio/Kelivo import, local RAG, S3/WebDAV backup, and a built-in AI gateway."
 
 hero:
   name: AQBot
-  text: Your AI Desktop Assistant
-  tagline: Multi-model chat, MCP tools, API gateway, knowledge base — all in one open-source client
+  text: "Your AI Desktop Workspace"
+  tagline: "Multi-model chat, Agent, MCP tools, API gateway, imports, knowledge base and backups in one local-first client"
+  image:
+    src: /logo.png
+    alt: AQBot
+  actions:
+    - theme: brand
+      text: "Quick Start"
+      link: /guide/getting-started
+    - theme: alt
+      text: "Download"
+      link: /download
+    - theme: alt
+      text: GitHub
+      link: https://github.com/AQBot-Desktop/AQBot
 
 features:
   - icon: robot
-    title: Multi-Model Chat
-    details: Connect to OpenAI, Claude, Gemini, DeepSeek, Qwen, and any OpenAI-compatible API. Multi-key rotation, streaming output, and thinking blocks.
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: Agent mode for autonomous task execution. Read/write files, run commands, analyze code — with three permission levels and working directory sandboxing.
+    title: "Multi-Model Chat"
+    details: "OpenAI, Claude, Gemini, DeepSeek, Qwen and compatible APIs with key rotation, branches, compression and multi-model answers."
   - icon: api
-    title: MCP Tool Calling
-    details: Full Model Context Protocol support — stdio, SSE, StreamableHTTP. Connect external tools with one click. Built-in MCP tools like @aqbot/fetch.
-  - icon: cloud-server
-    title: Built-in API Gateway
-    details: Local OpenAI-compatible API server. Use AQBot as the backend for Claude Code, Codex, Gemini CLI, and more. Key management, rate limiting, SSL/TLS.
-  - icon: book
-    title: Knowledge Base & RAG
-    details: Local vector embeddings with sqlite-vec. AI answers based on your private documents — data never leaves your machine.
-  - icon: search
-    title: Web Search
-    details: Integrated Tavily, Zhipu WebSearch, Bocha. Search results with citation sources injected into the conversation context.
+    title: "Fast Provider Setup"
+    details: "aqbot:// provider links, CC Switch import, custom headers, proxy settings, OpenAI Responses and per-model extra_body controls."
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "File edits, commands and code analysis with permission levels, working-directory sandboxing, approval UI and cost tracking."
   - icon: edit
-    title: Rich Content Rendering
-    details: Markdown, LaTeX, Mermaid diagrams, D2 architecture diagrams, Monaco Code Editor with diff preview, and Artifact panels.
-  - icon: desktop
-    title: Desktop Experience
-    details: Global shortcuts, system tray, auto-start, always-on-top, dark/light themes, and proxy support.
+    title: "Rich Rendering"
+    details: "Markdown, LaTeX, Mermaid, D2, Monaco code blocks, HTML fragments and Artifact previews built for streaming replies."
+  - icon: search
+    title: "Search & RAG"
+    details: "Web search with citations, query generation, local sqlite-vec knowledge bases, rerank settings and retrieval feedback."
+  - icon: cloud-server
+    title: "API Gateway"
+    details: "Local OpenAI-compatible, OpenAI Responses, Claude and Gemini endpoints for Claude Code, Codex, OpenCode and custom tools."
+  - icon: book
+    title: "Data Import"
+    details: "Bring in ChatGPT official exports, Cherry Studio backups and Kelivo backups with duplicate handling and optional provider migration."
   - icon: lock
-    title: Privacy & Security
-    details: All data stored locally. AES-256 encrypted API keys. Auto backup to local or WebDAV. Conversation export as PNG/Markdown/JSON.
+    title: "Backup & Security"
+    details: "AES-256 encrypted local storage, dual-root data layout, local/WebDAV/S3 backups and restore workflows."
+  - icon: desktop
+    title: "Desktop Experience"
+    details: "11 interface languages, tray mode, always-on-top, global shortcuts, auto-start, proxy support and auto-update checks."
 ---

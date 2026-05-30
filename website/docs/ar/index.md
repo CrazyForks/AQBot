@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — عميل سطح مكتب AI مفتوح المصدر وبوابة
+title: "AQBot — open-source AI desktop client وgateway"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot عميل سطح مكتب AI مجاني ومفتوح المصدر مع بوابة AI مدمجة. اتصل بـ OpenAI وClaude وGemini وDeepSeek والمزيد. دعم خادم MCP وقاعدة المعرفة والخصوصية أولاً.
+      content: "AQBot هو free open-source AI desktop client يدعم multi-model chat وAgent وMCP وChatGPT/Cherry Studio/Kelivo import وlocal RAG وS3/WebDAV backup وbuilt-in AI gateway."
 
 hero:
   name: AQBot
-  text: مساعد AI لسطح المكتب
-  tagline: محادثة متعددة النماذج، أدوات MCP، بوابة API، قاعدة المعرفة — كل ذلك في عميل مفتوح المصدر واحد
+  text: "مساحة عمل AI على سطح المكتب"
+  tagline: "Multi-model chat وAgent وMCP tools وAPI gateway وimports وknowledge base وbackups داخل عميل local-first واحد"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: ابدأ الآن
+      text: "البدء السريع"
       link: /ar/guide/getting-started
     - theme: alt
-      text: تنزيل
+      text: "تحميل"
       link: /ar/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: محادثة متعددة النماذج
-    details: اتصل بـ OpenAI وClaude وGemini وDeepSeek وQwen وأي API متوافق. تدوير مفاتيح متعددة، مخرجات streaming، كتل التفكير.
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: وضع Agent للتنفيذ التلقائي للمهام. قراءة/كتابة الملفات، تشغيل الأوامر، تحليل الكود — ثلاثة مستويات أذونات + صندوق حماية دليل العمل.
+    title: "Multi-model chat"
+    details: "OpenAI وClaude وGemini وDeepSeek وQwen وcompatible APIs مع key rotation وbranches وcompression وmulti-model answers."
   - icon: api
-    title: استدعاء أدوات MCP
-    details: تطبيق كامل لبروتوكول Model Context Protocol. دعم stdio وSSE وStreamableHTTP. اتصل بالأدوات الخارجية بنقرة واحدة. أدوات MCP مدمجة مثل @aqbot/fetch.
-  - icon: cloud-server
-    title: بوابة API مدمجة
-    details: خادم API محلي متوافق مع OpenAI. استخدم AQBot كخلفية لـ Claude Code وCodex وGemini CLI وغيرها. إدارة المفاتيح وتحديد المعدل وSSL/TLS.
-  - icon: book
-    title: قاعدة المعرفة والRAG
-    details: تضمين متجه محلي مع sqlite-vec. إجابات AI بناءً على مستنداتك الخاصة — البيانات لا تغادر جهازك أبداً.
-  - icon: search
-    title: بحث الويب
-    details: تكامل مع Tavily وZhipu WebSearch وBocha. نتائج البحث مع مصادر الاستشهاد يتم حقنها في سياق المحادثة.
+    title: "Provider setup"
+    details: "aqbot:// provider links وCC Switch import وcustom headers وproxy settings وOpenAI Responses وper-model extra_body."
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "File edits وcommands وcode analysis مع permission levels وworking-directory sandbox وapproval UI وcost tracking."
   - icon: edit
-    title: عرض محتوى غني
-    details: Markdown وLaTeX ومخططات Mermaid ومخططات D2 المعمارية ومحرر كود Monaco مع معاينة diff ولوحات Artifact.
-  - icon: desktop
-    title: تجربة سطح المكتب
-    details: اختصارات عامة وصينية النظام والتشغيل التلقائي والإبقاء فوق كل النوافذ والثيمات الداكنة/الفاتحة ودعم الوكيل.
+    title: "Rich rendering"
+    details: "Markdown وLaTeX وMermaid وD2 وMonaco code blocks وHTML fragments وArtifact previews."
+  - icon: search
+    title: "Search وRAG"
+    details: "Web search with citations وquery generation وlocal sqlite-vec knowledge bases وrerank settings وretrieval feedback."
+  - icon: cloud-server
+    title: "API gateway"
+    details: "Local OpenAI-compatible وOpenAI Responses وClaude وGemini endpoints لـ Claude Code وCodex وOpenCode وcustom tools."
+  - icon: book
+    title: "Data import"
+    details: "ChatGPT official exports وCherry Studio backups وKelivo backups مع duplicate handling وoptional provider migration."
   - icon: lock
-    title: الخصوصية والأمان
-    details: جميع البيانات مخزنة محلياً. مفاتيح API مشفرة بـ AES-256. نسخ احتياطي تلقائي محلياً أو على WebDAV. تصدير المحادثة بـ PNG/Markdown/JSON.
+    title: "Backup والأمان"
+    details: "AES-256 encrypted local storage وdual-root data layout وlocal/WebDAV/S3 backups وrestore workflows."
+  - icon: desktop
+    title: "Desktop experience"
+    details: "11 interface languages وtray mode وalways-on-top وglobal shortcuts وauto-start وproxy support وauto-update checks."
 ---

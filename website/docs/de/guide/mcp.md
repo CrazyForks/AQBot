@@ -54,6 +54,10 @@ Klicken Sie auf **JSON-Import** und fügen Sie ein Konfigurationsobjekt ein. AQB
 
 ---
 
+## Tool-Loop-Limit
+
+Unter Settings -> MCP können Sie die maximale Anzahl aufeinanderfolgender Tool-Call-Iterationen für eine MCP-Antwort konfigurieren. Reduzieren Sie das Limit beim Testen unbekannter Server oder erhöhen Sie es für Workflows, die mehrere Tools bewusst verketten.
+
 ## Nächste Schritte
 
 - [API-Gateway](./gateway) — Ihre Anbieter als lokalen API-Server exponieren

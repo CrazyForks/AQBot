@@ -54,6 +54,10 @@ Haz clic en **Importar JSON** y pega un objeto de configuración:
 
 ---
 
+## Límite de bucle de herramientas
+
+Settings -> MCP permite configurar el número máximo de iteraciones consecutivas de tool calls para una respuesta MCP. Baja el límite al probar servidores desconocidos o súbelo para workflows que encadenan varias herramientas.
+
 ## Próximos pasos
 
 - [Pasarela API](./gateway) — exponer tus proveedores como servidor API local

@@ -30,74 +30,56 @@
 
 ## الميزات
 
+AQBot هو مساحة عمل AI مكتبية local-first. تم تحديث هذه الصفحة لـ v0.0.85 لتشمل import للمزوّدين، import للبيانات من التطبيقات الأخرى، MCP، HTML rendering، backup وgateway.
+
 ### الدردشة والنماذج
 
-- **دعم متعدد المزودين** — متوافق مع OpenAI وAnthropic Claude وGoogle Gemini وجميع واجهات برمجة التطبيقات المتوافقة مع OpenAI
-- **إدارة النماذج** — جلب قوائم النماذج عن بُعد، وتخصيص المعاملات (درجة الحرارة، الحد الأقصى للرموز المميزة، Top-P، إلخ)
-- **تدوير متعدد المفاتيح** — تكوين مفاتيح API متعددة لكل مزود مع التدوير التلقائي لتوزيع ضغط حد المعدل
-- **الإخراج المتدفق** — عرض في الوقت الفعلي رمزاً بعد رمز مع كتل تفكير قابلة للطي
-- **إصدارات الرسائل** — التبديل بين إصدارات متعددة للاستجابة لكل رسالة لمقارنة تأثيرات النموذج أو المعاملات
-- **تفريع المحادثة** — إنشاء فروع جديدة من أي عقدة رسالة، مع مقارنة الفروع جنباً إلى جنب
-- **إدارة المحادثات** — التثبيت والأرشفة والعرض المجمّع حسب الوقت والعمليات الجماعية
-- **ضغط المحادثة** — ضغط المحادثات الطويلة تلقائياً مع الحفاظ على المعلومات الرئيسية لتوفير مساحة السياق
-- **استجابة متزامنة لنماذج متعددة** — طرح نفس السؤال على نماذج متعددة في آنٍ واحد، مع مقارنة الإجابات جنباً إلى جنب
+- **Multi-provider chat** — اربط OpenAI وClaude وGemini وDeepSeek وQwen وأي OpenAI-compatible endpoint مع Base URL وAPI Path وheaders وproxy rules.
+- **تهيئة المزوّدين** — استخدم aqbot:// provider links وCC Switch import لجلب provider profiles إلى AQBot بعد تأكيد المستخدم.
+- **إدارة النماذج** — زامن remote model lists، ونظّم groups، واختبر latency، واضبط capabilities وcontext length وsampling defaults وreasoning profiles وper-model extra_body.
+- **مسارات المحادثة** — Streaming replies وthinking blocks وmessage versions وbranches وtitle-generation status وlong chat compression وmulti-model comparison.
 
 ### AI Agent
 
-- **وضع Agent** — التبديل إلى وضع Agent للتنفيذ التلقائي للمهام متعددة الخطوات: قراءة/كتابة الملفات، تشغيل الأوامر، تحليل الكود، والمزيد
-- **ثلاثة مستويات أذونات** — افتراضي (الكتابة تحتاج موافقة)، قبول التعديلات (الموافقة التلقائية على تغييرات الملفات)، وصول كامل (بدون مطالبات) — آمن وقابل للتحكم
-- **صندوق حماية دليل العمل** — عمليات Agent مقيدة بشكل صارم بدليل العمل المحدد، مما يمنع الوصول غير المصرح به
-- **لوحة الموافقة على الأدوات** — عرض في الوقت الفعلي لطلبات استدعاء الأدوات مع مراجعة كل أداة، والسماح دائماً بنقرة واحدة، أو الرفض
-- **تتبع التكلفة** — إحصائيات استخدام الرموز المميزة والتكلفة في الوقت الفعلي لكل جلسة
+- **Agent mode** — يمكن للنموذج تعديل الملفات وتشغيل الأوامر وتحليل الكود داخل desktop workflow مضبوط.
+- **التحكم في الصلاحيات** — اختر standard review أو auto-accept edits أو full-access mode مع استمرار working-directory sandbox checks.
+- **الموافقة والتكلفة** — راجع tool calls لحظياً، واحفظ allow decisions، وتابع token/cost لكل session.
 
 ### عرض المحتوى
 
-- **عرض Markdown** — دعم كامل لتمييز الكود وصيغ الرياضيات LaTeX والجداول وقوائم المهام
-- **محرر كود Monaco** — Monaco Editor مضمّن في كتل الكود مع تمييز بناء الجملة والنسخ ومعاينة diff
-- **عرض المخططات** — عرض مدمج لمخططات تدفق Mermaid ومخططات بنية D2
-- **لوحة Artifact** — مقتطفات الكود ومسودات HTML وملاحظات Markdown والتقارير قابلة للعرض في لوحة مخصصة
-- **دردشة صوتية في الوقت الفعلي** — (قريباً) صوت في الوقت الفعلي قائم على WebRTC مع دعم OpenAI Realtime API
+- **Markdown والمعادلات** — اعرض Markdown وcode highlighting وtables وtask lists وLaTeX formulas داخل streaming conversations.
+- **الكود والمخططات وArtifact** — استخدم Monaco code blocks وMermaid وD2 وArtifact panel للكود والملاحظات والتقارير والمعاينات.
+- **HTML fragments** — عاين generated HTML fragments بأمان مع أحدث streaming stability fixes.
 
 ### البحث والمعرفة
 
-- **بحث الويب** — متكامل مع Tavily وZhipu WebSearch وBocha والمزيد، مع تعليقات توضيحية لمصادر الاستشهاد
-- **قاعدة المعرفة المحلية (RAG)** — يدعم قواعد معرفة متعددة؛ تحميل المستندات لتحليل وتقطيع وفهرسة تلقائية، مع الاسترداد الدلالي للمقاطع ذات الصلة أثناء المحادثات
-- **نظام الذاكرة** — يدعم ذاكرة المحادثة متعددة مساحات الأسماء، مع إدخال يدوي أو استخراج تلقائي بالذكاء الاصطناعي (الاستخراج التلقائي قريباً)
-- **إدارة السياق** — إرفاق مرفقات الملفات ونتائج البحث ومقاطع قاعدة المعرفة وإدخالات الذاكرة ومخرجات الأدوات بمرونة
+- **Web search** — يدعم Tavily وZhipu WebSearch وBocha مع cited sources وgenerated search queries.
+- **Local knowledge base** — افهرس private documents باستخدام sqlite-vec واضبط retrieval/rerank options وراجع retrieval feedback.
+- **Context management** — أضف files وsearch results وknowledge snippets وmemories وtool output إلى conversation context.
 
 ### الأدوات والامتدادات
 
-- **بروتوكول MCP** — تطبيق كامل لـ Model Context Protocol يدعم نقلَي stdio وHTTP
-- **الأدوات المدمجة** — أدوات MCP مدمجة جاهزة للاستخدام مثل `@aqbot/fetch`
-- **لوحة تنفيذ الأدوات** — عرض مرئي لطلبات استدعاء الأدوات والنتائج المُعادة
+- **MCP protocol** — شغّل Model Context Protocol servers عبر stdio أو SSE أو StreamableHTTP.
+- **Built-in tools** — استخدم @aqbot/fetch وfile search بدون تثبيت server منفصل.
+- **Tool loop limit** — اضبط MCP tool-call loop count واستعد بشكل أفضل من interrupted أو stuck tool sessions.
 
-### بوابة API
+### API gateway
 
-- **بوابة API محلية** — خادم API محلي مدمج مع دعم أصلي لواجهات متوافقة مع OpenAI وClaude وGemini، قابل للاستخدام كخلفية لأي عميل متوافق
-- **إدارة مفاتيح API** — توليد مفاتيح الوصول وإلغاؤها وتمكينها/تعطيلها مع ملاحظات وصفية
-- **تحليلات الاستخدام** — تحليل حجم الطلبات واستخدام الرموز المميزة حسب المفتاح والمزود والتاريخ
-- **دعم SSL/TLS** — توليد شهادات موقّعة ذاتياً مدمج، مع دعم الشهادات المخصصة
-- **سجلات الطلبات** — تسجيل كامل لجميع طلبات واستجابات API المارة عبر البوابة
-- **قوالب التكوين** — قوالب تكامل مسبقة البناء لأدوات CLI الشائعة مثل Claude وCodex وOpenCode وGemini
+- **Local gateway** — اعرض OpenAI Chat Completions وOpenAI Responses وClaude-native وGemini-native endpoints من desktop app.
+- **الوصول والمراقبة** — أدر gateway keys وSSL/TLS certificates وrequest logs وusage analytics محلياً.
+- **Client templates** — Templates جاهزة لـ Claude Code وCodex CLI وOpenCode وGemini CLI وcustom clients.
 
-### البيانات والأمان
+### استيراد البيانات والنسخ الاحتياطي
 
-- **تشفير AES-256** — مفاتيح API والبيانات الحساسة مشفرة محلياً بـ AES-256؛ المفتاح الرئيسي مخزّن بأذونات 0600
-- **أدلة بيانات معزولة** — حالة التطبيق في `~/.aqbot/`؛ ملفات المستخدم في `~/Documents/aqbot/`
-- **النسخ الاحتياطي التلقائي** — نسخ احتياطية تلقائية مجدولة إلى أدلة محلية أو تخزين WebDAV
-- **استعادة النسخ الاحتياطي** — استعادة بنقرة واحدة من النسخ الاحتياطية التاريخية
-- **تصدير المحادثات** — تصدير المحادثات كلقطات PNG أو Markdown أو نص عادي أو JSON
+- **Third-party imports** — استورد ChatGPT official exports وCherry Studio backups وKelivo backups مع preview counts وwarnings وduplicate handling.
+- **Provider and file migration** — يمكن لـ Cherry Studio/Kelivo import نقل linked providers وAPI keys وfile attachments اختيارياً.
+- **Backups** — انسخ واستعد البيانات عبر local folders أو WebDAV أو S3-compatible storage.
 
-### تجربة سطح المكتب
+### سطح المكتب والأمان
 
-- **تبديل السمة** — سمات داكنة/فاتحة تتبع تفضيلات النظام أو يمكن ضبطها يدوياً
-- **لغة الواجهة** — دعم كامل للصينية المبسطة والصينية التقليدية والإنجليزية واليابانية والكورية والفرنسية والألمانية والإسبانية والروسية والهندية والعربية، قابلة للتبديل في أي وقت من الإعدادات
-- **صينية النظام** — التصغير إلى صينية النظام عند إغلاق النافذة دون مقاطعة الخدمات الخلفية
-- **دائماً في المقدمة** — تثبيت النافذة الرئيسية فوق جميع النوافذ الأخرى
-- **اختصارات عالمية** — اختصارات لوحة مفاتيح عالمية قابلة للتخصيص لاستدعاء النافذة الرئيسية في أي وقت
-- **التشغيل التلقائي** — إطلاق اختياري عند بدء تشغيل النظام
-- **دعم الوكيل** — تكوين وكيل HTTP وSOCKS5
-- **التحديث التلقائي** — يتحقق تلقائياً من الإصدارات الجديدة عند بدء التشغيل ويطلب التحديث
+- **Local encryption** — يُحفظ app state في ~/.aqbot/ وuser files في ~/Documents/aqbot/، وتُحمى API keys عبر AES-256 وlocal master key.
+- **Desktop integration** — Tray وalways-on-top وglobal shortcuts وauto-start وproxy settings وautomatic update checks.
+- **11 interface languages** — بدّل بين Simplified Chinese وTraditional Chinese وEnglish وJapanese وKorean وFrench وGerman وSpanish وRussian وHindi وArabic.
 
 ## دعم المنصات
 

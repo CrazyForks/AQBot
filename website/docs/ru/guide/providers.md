@@ -108,6 +108,14 @@ API-ключ в URL может попасть в историю браузера
 
 ---
 
+## Импорт из CC Switch
+
+AQBot может сканировать конфигурации провайдеров CC Switch в Settings -> Providers. Проверьте кандидатов, выберите импортируемые строки и импортируйте providers, Base URLs, API keys и model lists. OAuth-only entries и записи без reusable keys пропускаются с видимой причиной.
+
+## Расширенное тело запроса модели
+
+Для каждой модели можно задать extra_body, JSON-объект, который добавляется в OpenAI-compatible Chat Completions request. Это удобно для provider-specific options вроде enable_thinking. AQBot валидирует JSON и блокирует перезапись model, messages, stream, tools и базовых sampling fields.
+
 ## Ротация нескольких ключей
 
 AQBot поддерживает несколько ключей API на провайдера. Нажмите **Добавить ключ** в панели деталей провайдера.

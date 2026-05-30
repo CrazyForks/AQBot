@@ -54,6 +54,10 @@ Cliquez sur **Import JSON** et collez un objet de configuration. AQBot accepte l
 
 ---
 
+## Limite de boucle des outils
+
+Settings -> MCP permet de configurer le nombre maximal d’itérations consécutives d’appels d’outils pour une réponse MCP. Réduisez la limite pour tester des serveurs inconnus, ou augmentez-la pour les workflows qui chaînent volontairement plusieurs outils.
+
 ## Prochaines étapes
 
 - [Passerelle API](./gateway) — exposer vos fournisseurs comme serveur API local

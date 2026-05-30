@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — オープンソース AI デスクトップクライアント & ゲートウェイ
+title: "AQBot — オープンソース AI デスクトップクライアント & ゲートウェイ"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot は無料のオープンソース AI デスクトップクライアントで、AI ゲートウェイを内蔵しています。OpenAI、Claude、Gemini、DeepSeek などのマルチモデル対話、MCP サーバー、ナレッジベース、プライバシー重視。
+      content: "AQBot は無料のオープンソース AI デスクトップクライアントです。マルチモデルチャット、Agent、MCP、ChatGPT/Cherry Studio/Kelivo インポート、ローカル RAG、S3/WebDAV バックアップ、内蔵 AI ゲートウェイをサポートします。"
 
 hero:
   name: AQBot
-  text: あなたの AI デスクトップアシスタント
-  tagline: マルチモデルチャット、MCP ツール、API ゲートウェイ、ナレッジベース — すべて一つのオープンソースクライアントで
+  text: "AI デスクトップワークスペース"
+  tagline: "マルチモデルチャット、Agent、MCP ツール、API ゲートウェイ、インポート、ナレッジベース、バックアップを 1 つのローカルファーストクライアントに統合"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: はじめる
+      text: "クイックスタート"
       link: /ja/guide/getting-started
     - theme: alt
-      text: ダウンロード
+      text: "ダウンロード"
       link: /ja/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: マルチモデルチャット
-    details: OpenAI、Claude、Gemini、DeepSeek、Qwen などすべての互換 API に接続。マルチキーローテーション、ストリーミング出力、思考ブロック対応。
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: Agent モードで自律的なタスク実行。ファイルの読み書き、コマンド実行、コード分析——3段階の権限制御と作業ディレクトリサンドボックスで安全に制御。
+    title: "マルチモデルチャット"
+    details: "OpenAI、Claude、Gemini、DeepSeek、Qwen と互換 API。キーローテーション、分岐、圧縮、複数モデル回答に対応。"
   - icon: api
-    title: MCP ツール呼び出し
-    details: Model Context Protocol を完全実装。stdio、SSE、StreamableHTTP をサポート。ワンクリックで外部ツールに接続、@aqbot/fetch などのビルトイン MCP ツール付き。
-  - icon: cloud-server
-    title: ビルトイン API ゲートウェイ
-    details: ローカル OpenAI 互換 API サーバー。Claude Code、Codex、Gemini CLI などのバックエンドとして使用可能。キー管理、レート制限、SSL/TLS 対応。
-  - icon: book
-    title: ナレッジベース & RAG
-    details: sqlite-vec によるローカルベクトル埋め込み。プライベートドキュメントに基づく AI 回答、データはローカルから外に出ません。
-  - icon: search
-    title: ウェブ検索
-    details: Tavily、Zhipu WebSearch、Bocha と統合。引用ソース付きの検索結果が会話コンテキストに自動注入されます。
+    title: "プロバイダー設定"
+    details: "aqbot:// リンク、CC Switch インポート、カスタムヘッダー、プロキシ、OpenAI Responses、モデル別 extra_body。"
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "ファイル編集、コマンド実行、コード分析を権限制御、作業ディレクトリサンドボックス、承認 UI、コスト追跡付きで実行。"
   - icon: edit
-    title: リッチコンテンツレンダリング
-    details: Markdown、LaTeX、Mermaid 図、D2 アーキテクチャ図、Monaco コードエディター（diff プレビュー付き）、Artifact パネル。
-  - icon: desktop
-    title: デスクトップ体験
-    details: グローバルショートカット、システムトレイ、自動起動、最前面表示、ダーク/ライトテーマ、プロキシサポート。
+    title: "リッチレンダリング"
+    details: "Markdown、LaTeX、Mermaid、D2、Monaco、HTML フラグメント、Artifact プレビュー。"
+  - icon: search
+    title: "検索と RAG"
+    details: "引用付き Web 検索、クエリ生成、ローカル sqlite-vec ナレッジベース、リランク設定、取得フィードバック。"
+  - icon: cloud-server
+    title: "API ゲートウェイ"
+    details: "OpenAI 互換、OpenAI Responses、Claude、Gemini のローカル API を Claude Code、Codex、OpenCode などに提供。"
+  - icon: book
+    title: "データインポート"
+    details: "ChatGPT 公式エクスポート、Cherry Studio、Kelivo バックアップを重複処理と任意のプロバイダー移行付きで取り込み。"
   - icon: lock
-    title: プライバシー & セキュリティ
-    details: すべてのデータをローカルに保存。AES-256 で API キーを暗号化。ローカルまたは WebDAV への自動バックアップ。PNG/Markdown/JSON 形式でエクスポート。
+    title: "バックアップと安全性"
+    details: "AES-256 ローカル暗号化、二重ルートデータ配置、ローカル/WebDAV/S3 バックアップと復元。"
+  - icon: desktop
+    title: "デスクトップ体験"
+    details: "11 言語 UI、トレイ、常に手前、グローバルショートカット、自動起動、プロキシ、自動更新。"
 ---

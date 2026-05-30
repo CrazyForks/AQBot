@@ -195,6 +195,10 @@ Click on any tool call in the conversation to expand its details. This makes it 
 
 ---
 
+## Tool Loop Limit
+
+In Settings -> Conversation, MCP Tool Loop Max Iterations limits how many consecutive tool-call rounds one model response may run. Lower values reduce latency and cost; higher values allow longer autonomous tool workflows.
+
 ## Next Steps
 
 - [API Gateway](./gateway) — expose your providers as a local API server

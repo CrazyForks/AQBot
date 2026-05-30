@@ -108,6 +108,14 @@ aqbot://providers?name=OpenAI&baseurl=https%3A%2F%2Fapi.openai.com&apikey=sk-xxx
 
 ---
 
+## Import من CC Switch
+
+يمكن لـ AQBot فحص CC Switch provider configurations من Settings -> Providers. راجع كل candidate، اختر importable rows، ثم import providers وBase URLs وAPI keys وmodel lists إلى AQBot. يتم تخطي OAuth-only entries أو entries التي لا تحتوي على reusable keys مع سبب واضح.
+
+## Advanced model request body
+
+يمكن لكل model تعريف extra_body، وهو JSON object يضاف بشكل flat إلى OpenAI-compatible Chat Completions requests. يفيد ذلك في vendor-specific options مثل enable_thinking. يتحقق AQBot من JSON ويمنع overwrite للحقول model وmessages وstream وtools وbase sampling fields.
+
 ## تدوير مفاتيح متعددة
 
 يدعم AQBot مفاتيح API متعددة لكل مزوّد. انقر **إضافة مفتاح** في لوحة تفاصيل المزوّد.

@@ -52,6 +52,10 @@
 
 ---
 
+## Tool loop limit
+
+في Settings -> MCP يمكن ضبط الحد الأقصى لعدد consecutive tool-call iterations داخل MCP-enabled response. اخفض الحد عند اختبار unknown servers، وارفعه للـ workflows التي تحتاج chaining لعدة tools.
+
 ## الخطوات التالية
 
 - [بوابة API](./gateway) — كشف مزوّديك كخادم API محلي

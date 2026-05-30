@@ -108,6 +108,14 @@ Ein API-Schlüssel in einer URL kann im Browserverlauf, in Logs, Erweiterungen o
 
 ---
 
+## Aus CC Switch importieren
+
+AQBot kann CC Switch-Providerkonfigurationen unter Settings -> Providers scannen. Prüfen Sie Kandidaten, wählen Sie importierbare Zeilen aus und importieren Sie Provider, Base URLs, API Keys und Modelllisten. OAuth-only Einträge oder Einträge ohne wiederverwendbare Schlüssel werden mit sichtbarem Grund übersprungen.
+
+## Erweiterter Modell-Request-Body
+
+Jedes Modell kann extra_body definieren, ein JSON-Objekt, das flach zu OpenAI-kompatiblen Chat Completions Requests hinzugefügt wird. Das ist nützlich für Anbieteroptionen wie enable_thinking. AQBot validiert JSON und verhindert das Überschreiben von model, messages, stream, tools und Basis-Sampling-Feldern.
+
 ## Multi-Key-Rotation
 
 AQBot unterstützt mehrere API-Schlüssel pro Anbieter. Klicken Sie auf **Schlüssel hinzufügen** im Anbieter-Detailpanel.

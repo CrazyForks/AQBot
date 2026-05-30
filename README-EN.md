@@ -30,74 +30,56 @@
 
 ## Features
 
+AQBot is a local-first AI desktop workspace. This page is updated for v0.0.85 and covers the recent provider import, third-party data import, MCP, HTML rendering, backup and gateway work.
+
 ### Chat & Models
 
-- **Multi-Provider Support** — Compatible with OpenAI, Anthropic Claude, Google Gemini, and all OpenAI-compatible APIs
-- **Model Management** — Fetch remote model lists, customize parameters (temperature, max tokens, top-p, etc.)
-- **Multi-Key Rotation** — Configure multiple API keys per provider with automatic rotation to distribute rate limit pressure
-- **Streaming Output** — Real-time token-by-token rendering with collapsible thinking blocks
-- **Message Versions** — Switch between multiple response versions per message to compare model or parameter effects
-- **Conversation Branching** — Fork new branches from any message node, with side-by-side branch comparison
-- **Conversation Management** — Pin, archive, time-grouped display, and bulk operations
-- **Conversation Compression** — Automatically compress lengthy conversations, preserving key information to save context space
-- **Multi-Model Simultaneous Response** — Ask the same question to multiple models at once, with side-by-side comparison of answers
+- **Multi-provider chat** — Connect OpenAI, Claude, Gemini, DeepSeek, Qwen and any OpenAI-compatible endpoint with custom Base URL, API Path, headers and proxy rules.
+- **Provider onboarding** — Use aqbot:// provider links and CC Switch import to bring provider profiles into AQBot after user confirmation.
+- **Model management** — Sync remote model lists, organize groups, test latency and configure capabilities, context length, sampling defaults, reasoning profiles and per-model extra_body fields.
+- **Conversation workflows** — Stream replies with thinking blocks, compare message versions, branch conversations, show title-generation status, compress long chats and ask multiple models in parallel.
 
 ### AI Agent
 
-- **Agent Mode** — Switch to Agent mode for autonomous multi-step task execution: read/write files, run commands, analyze code, and more
-- **Three Permission Levels** — Default (writes need approval), Accept Edits (auto-approve file changes), Full Access (no prompts) — safe and controllable
-- **Working Directory Sandbox** — Agent operations are strictly confined to the specified working directory, preventing unauthorized access
-- **Tool Approval Panel** — Real-time display of tool call requests with per-tool review, one-click "always allow", or deny
-- **Cost Tracking** — Real-time token usage and cost statistics per session
+- **Agent mode** — Let the model read and edit files, run commands and analyze code inside a controlled desktop workflow.
+- **Permission control** — Choose standard review, auto-accept edits or full-access mode while keeping working-directory sandbox checks active.
+- **Approval and cost UI** — Review tool calls in real time, remember allow decisions and track token/cost usage for each agent session.
 
 ### Content Rendering
 
-- **Markdown Rendering** — Full support for code highlighting, LaTeX math formulas, tables, and task lists
-- **Monaco Code Editor** — Embedded Monaco Editor in code blocks with syntax highlighting, copy, and diff preview
-- **Diagram Rendering** — Built-in Mermaid flowchart and D2 architecture diagram rendering
-- **Artifact Panel** — Code snippets, HTML drafts, Markdown notes, and reports viewable in a dedicated panel
-- **Real-Time Voice Chat** — (Coming Soon) WebRTC-based real-time voice with OpenAI Realtime API support
+- **Markdown and math** — Render Markdown, code highlighting, tables, task lists and LaTeX formulas in streaming conversations.
+- **Code, diagrams and artifacts** — Use Monaco code blocks, Mermaid, D2 diagrams and an Artifact panel for code, Markdown notes, reports and previews.
+- **HTML fragment rendering** — Preview generated HTML fragments safely, including the streaming fixes added in the recent releases.
 
 ### Search & Knowledge
 
-- **Web Search** — Integrated with Tavily, Zhipu WebSearch, Bocha, and more, with citation source annotations
-- **Local Knowledge Base (RAG)** — Supports multiple knowledge bases; upload documents for automatic parsing, chunking, and indexing, with semantic retrieval of relevant passages during conversations
-- **Memory System** — Supports multi-namespace conversational memory, with manual entry or AI-powered auto-extraction (auto-extraction coming soon)
-- **Context Management** — Flexibly attach file attachments, search results, knowledge base passages, memory entries, and tool outputs
+- **Web search** — Use Tavily, Zhipu WebSearch, Bocha and other search providers with cited sources and generated search queries.
+- **Local knowledge bases** — Index private documents with sqlite-vec, tune retrieval/rerank options and inspect retrieval feedback.
+- **Context management** — Attach files, search results, knowledge snippets, memories and tool output to the conversation context.
 
 ### Tools & Extensions
 
-- **MCP Protocol** — Full Model Context Protocol implementation supporting both stdio and HTTP transports
-- **Built-in Tools** — Ready-to-use built-in MCP tools such as `@aqbot/fetch`
-- **Tool Execution Panel** — Visual display of tool call requests and return results
+- **MCP protocol** — Run Model Context Protocol servers over stdio, SSE or StreamableHTTP.
+- **Built-in tools** — Use built-in MCP tools such as @aqbot/fetch and file search without installing a separate server.
+- **Tool loop limit** — Configure the maximum MCP tool-call loop count and recover more cleanly from interrupted or stuck tool sessions.
 
 ### API Gateway
 
-- **Local API Gateway** — Built-in local API server with native support for OpenAI-compatible, Claude, and Gemini interfaces, usable as a backend for any compatible client
-- **API Key Management** — Generate, revoke, and enable/disable access keys with description notes
-- **Usage Analytics** — Request volume and token usage analysis by key, provider, and date
-- **SSL/TLS Support** — Built-in self-signed certificate generation, with support for custom certificates
-- **Request Logs** — Complete recording of all API requests and responses passing through the gateway
-- **Configuration Templates** — Pre-built integration templates for popular CLI tools such as Claude, Codex, OpenCode, and Gemini
+- **Local gateway** — Expose OpenAI Chat Completions, OpenAI Responses, Claude-native and Gemini-native endpoints from the desktop app.
+- **Access and observability** — Manage gateway keys, SSL/TLS certificates, request logs and usage analytics locally.
+- **Client templates** — Use ready-made templates for Claude Code, Codex CLI, OpenCode, Gemini CLI and custom clients.
 
-### Data & Security
+### Data Import & Backup
 
-- **AES-256 Encryption** — API keys and sensitive data encrypted locally with AES-256; master key stored with 0600 permissions
-- **Isolated Data Directories** — Application state in `~/.aqbot/`; user files in `~/Documents/aqbot/`
-- **Auto Backup** — Scheduled automatic backups to local directories or WebDAV storage
-- **Backup Restore** — One-click restore from historical backups
-- **Conversation Export** — Export conversations as PNG screenshots, Markdown, plain text, or JSON
+- **Third-party imports** — Import ChatGPT official exports, Cherry Studio backups and Kelivo backups with preview counts, warnings and duplicate handling.
+- **Provider and file migration** — Cherry Studio and Kelivo import can optionally migrate linked providers, API keys and file attachments.
+- **Backups** — Back up and restore local data through local folders, WebDAV or S3-compatible storage.
 
-### Desktop Experience
+### Desktop & Security
 
-- **Theme Switching** — Dark/light themes that follow the system preference or can be set manually
-- **Interface Language** — Full support for Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German, Spanish, Russian, Hindi, and Arabic, switchable at any time in settings
-- **System Tray** — Minimize to system tray on window close without interrupting background services
-- **Always on Top** — Pin the main window to stay above all other windows
-- **Global Shortcuts** — Customizable global keyboard shortcuts to summon the main window at any time
-- **Auto Start** — Optional launch on system startup
-- **Proxy Support** — HTTP and SOCKS5 proxy configuration
-- **Auto Update** — Automatically checks for new versions on startup and prompts for update
+- **Local encryption** — Store app state under ~/.aqbot/ and user files under ~/Documents/aqbot/, with API keys protected by AES-256 and a local master key.
+- **Desktop integration** — Use tray mode, always-on-top, global shortcuts, auto-start, proxy settings and automatic update checks.
+- **11 interface languages** — Switch between Simplified Chinese, Traditional Chinese, English, Japanese, Korean, French, German, Spanish, Russian, Hindi and Arabic.
 
 ## Platform Support
 

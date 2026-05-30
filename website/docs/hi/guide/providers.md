@@ -108,6 +108,14 @@ URL में API key ब्राउज़र history, logs, extensions या 
 
 ---
 
+## CC Switch से import
+
+AQBot Settings -> Providers में CC Switch provider configurations स्कैन कर सकता है। हर candidate देखें, importable rows चुनें, फिर providers, Base URLs, API keys और model lists AQBot में import करें। OAuth-only entries या reusable keys के बिना entries visible reason के साथ skip होती हैं।
+
+## Advanced model request body
+
+हर model extra_body define कर सकता है, जो OpenAI-compatible Chat Completions requests में flat JSON object के रूप में जोड़ा जाता है। यह enable_thinking जैसे vendor-specific options के लिए उपयोगी है। AQBot JSON validate करता है और model, messages, stream, tools तथा base sampling fields overwrite होने से रोकता है।
+
 ## मल्टी-की रोटेशन
 
 AQBot लोड वितरण के लिए प्रति प्रदाता कई API कीज़ सपोर्ट करता है। प्रदाता डिटेल पैनल में **Add Key** क्लिक करें।

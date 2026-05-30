@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — 開源 AI 桌面客戶端 & AI 閘道
+title: "AQBot — 開源 AI 桌面客戶端與閘道"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot 是一款免費開源的 AI 桌面客戶端，內建 AI 閘道。支援 OpenAI、Claude、Gemini、DeepSeek 等多模型對話，MCP 伺服器、知識庫、隱私優先。
+      content: "AQBot 是免費開源的 AI 桌面客戶端，支援多模型對話、Agent、MCP、ChatGPT/Cherry Studio/Kelivo 匯入、本機知識庫、S3/WebDAV 備份和內建 AI 閘道。"
 
 hero:
   name: AQBot
-  text: 您的 AI 桌面助手
-  tagline: 多模型對話、MCP 工具、API 閘道、知識庫，一個開源客戶端全部搞定
+  text: "你的 AI 桌面工作台"
+  tagline: "多模型對話、Agent、MCP 工具、API 閘道、資料匯入、知識庫和備份整合在一個本機優先客戶端裡"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: 快速開始
+      text: "快速開始"
       link: /zh-tw/guide/getting-started
     - theme: alt
-      text: 下載安裝
+      text: "下載"
       link: /zh-tw/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: 多模型對話
-    details: 接入 OpenAI、Claude、Gemini、DeepSeek、Qwen 等所有相容 API。多金鑰輪詢、串流輸出、Thinking 折疊展開。
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: 切換至 Agent 模式，AI 自主執行任務。讀寫檔案、執行命令、分析程式碼——三級權限控制 + 工作目錄沙箱，安全可控。
+    title: "多模型對話"
+    details: "OpenAI、Claude、Gemini、DeepSeek、Qwen 和相容 API，支援金鑰輪詢、分支、壓縮和多模型回答。"
   - icon: api
-    title: MCP 工具呼叫
-    details: 完整實現 Model Context Protocol，支援 stdio、SSE、StreamableHTTP。一鍵連接外部工具，內建 @aqbot/fetch 等 MCP 工具。
-  - icon: cloud-server
-    title: 內建 API 閘道
-    details: 本機 OpenAI 相容 API 伺服器，可作為 Claude Code、Codex、Gemini CLI 等工具的後端。金鑰管理、速率限制、SSL/TLS。
-  - icon: book
-    title: 知識庫 & RAG
-    details: 本機向量嵌入（sqlite-vec），AI 基於您的私有文件回答，資料不出本機。
-  - icon: search
-    title: 聯網搜尋
-    details: 整合 Tavily、智譜 WebSearch、Bocha，搜尋結果附帶引用來源，自動注入對話上下文。
+    title: "服務供應商快速設定"
+    details: "aqbot:// 連結、CC Switch 匯入、自訂請求頭、代理、OpenAI Responses 和模型 extra_body。"
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "檔案編輯、命令執行和程式碼分析，帶權限分級、工作目錄沙箱、審批 UI 和成本統計。"
   - icon: edit
-    title: 豐富內容渲染
-    details: Markdown、LaTeX 公式、Mermaid 流程圖、D2 架構圖、Monaco 程式碼編輯器 diff 預覽、Artifact 獨立面板。
-  - icon: desktop
-    title: 桌面體驗
-    details: 全域快捷鍵、系統托盤、開機自啟、視窗置頂、深淺主題、代理支援。
+    title: "富內容渲染"
+    details: "Markdown、LaTeX、Mermaid、D2、Monaco 程式碼區塊、HTML 片段和 Artifact 預覽。"
+  - icon: search
+    title: "搜尋與 RAG"
+    details: "帶引用的網路搜尋、查詢生成、本機 sqlite-vec 知識庫、重排設定和檢索回饋。"
+  - icon: cloud-server
+    title: "API 閘道"
+    details: "本機 OpenAI 相容、OpenAI Responses、Claude 和 Gemini 介面，服務 Claude Code、Codex、OpenCode 等工具。"
+  - icon: book
+    title: "資料匯入"
+    details: "匯入 ChatGPT 官方匯出、Cherry Studio 與 Kelivo 備份，處理重複並可遷移服務供應商。"
   - icon: lock
-    title: 隱私安全
-    details: 所有資料本機儲存，AES-256 加密 API 金鑰。支援自動備份到本機、WebDAV。對話匯出為 PNG/Markdown/JSON。
+    title: "備份與安全"
+    details: "AES-256 本機加密、雙目錄資料布局、本機/WebDAV/S3 備份和還原流程。"
+  - icon: desktop
+    title: "桌面體驗"
+    details: "11 種界面語言、系統匣、置頂、全域快捷鍵、開機自啟、代理和自動更新檢查。"
 ---

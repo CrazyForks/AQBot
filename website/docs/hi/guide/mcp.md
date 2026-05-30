@@ -52,6 +52,10 @@
 
 ---
 
+## Tool loop limit
+
+Settings -> MCP में MCP-enabled response के लिए consecutive tool-call iterations की maximum संख्या सेट कर सकते हैं। Unknown servers टेस्ट करते समय limit कम रखें, और multi-tool workflows के लिए इसे बढ़ा सकते हैं।
+
 ## अगले कदम
 
 - [API गेटवे](./gateway) — अपने प्रदाताओं को लोकल API सर्वर के रूप में एक्सपोज़ करें

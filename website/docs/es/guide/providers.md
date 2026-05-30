@@ -108,6 +108,14 @@ Una clave API dentro de una URL puede quedar en el historial del navegador, logs
 
 ---
 
+## Importar desde CC Switch
+
+AQBot puede escanear configuraciones de proveedores de CC Switch desde Settings -> Providers. Revisa cada candidato, selecciona las filas importables e importa proveedores, Base URLs, API keys y listas de modelos. Las entradas OAuth-only o sin claves reutilizables se omiten con un motivo visible.
+
+## Cuerpo de solicitud avanzado por modelo
+
+Cada modelo puede definir extra_body, un objeto JSON que se añade plano a las solicitudes OpenAI-compatible Chat Completions. Es útil para opciones específicas del proveedor como enable_thinking. AQBot valida el JSON y bloquea la sobrescritura de model, messages, stream, tools y campos básicos de sampling.
+
 ## Rotación de claves múltiples
 
 AQBot soporta múltiples claves API por proveedor. Haz clic en **Añadir clave** en el panel de detalles del proveedor.

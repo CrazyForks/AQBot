@@ -116,6 +116,14 @@ Custom URI schemes are registered by the installed desktop app. If `aqbot://...`
 
 ---
 
+## Importing from CC Switch
+
+AQBot can scan CC Switch provider configurations from Settings -> Providers. Review each candidate, select the importable rows, then import providers, Base URLs, API keys and model lists into AQBot. OAuth-only entries and entries without reusable keys are skipped with a visible reason.
+
+## Advanced Model Request Body
+
+Each model can define extra_body, a JSON object flattened into OpenAI-compatible Chat Completions requests. It is useful for vendor-specific options such as enable_thinking. AQBot validates the JSON and blocks reserved fields such as model, messages, stream, tools and base sampling parameters.
+
 ## Multi-Key Rotation
 
 AQBot supports multiple API keys per provider for load distribution and rate-limit avoidance.

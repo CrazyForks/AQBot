@@ -1,26 +1,26 @@
 ---
 layout: home
-title: AQBot — 오픈소스 AI 데스크톱 클라이언트 & 게이트웨이
+title: "AQBot — 오픈소스 AI 데스크톱 클라이언트 & 게이트웨이"
 titleTemplate: false
 
 head:
   - - meta
     - name: description
-      content: AQBot은 AI 게이트웨이가 내장된 무료 오픈소스 AI 데스크톱 클라이언트입니다. OpenAI, Claude, Gemini, DeepSeek 등 멀티 모델 대화, MCP 서버, 지식 베이스, 개인정보 보호 우선.
+      content: "AQBot은 멀티 모델 채팅, Agent, MCP, ChatGPT/Cherry Studio/Kelivo 가져오기, 로컬 RAG, S3/WebDAV 백업, 내장 AI 게이트웨이를 지원하는 무료 오픈소스 AI 데스크톱 클라이언트입니다."
 
 hero:
   name: AQBot
-  text: 당신의 AI 데스크톱 어시스턴트
-  tagline: 멀티 모델 채팅, MCP 도구, API 게이트웨이, 지식 베이스 — 모두 하나의 오픈소스 클라이언트에서
+  text: "AI 데스크톱 워크스페이스"
+  tagline: "멀티 모델 채팅, Agent, MCP 도구, API 게이트웨이, 가져오기, 지식베이스, 백업을 하나의 로컬 우선 클라이언트에 통합"
   image:
     src: /logo.png
     alt: AQBot
   actions:
     - theme: brand
-      text: 시작하기
+      text: "빠른 시작"
       link: /ko/guide/getting-started
     - theme: alt
-      text: 다운로드
+      text: "다운로드"
       link: /ko/download
     - theme: alt
       text: GitHub
@@ -28,30 +28,30 @@ hero:
 
 features:
   - icon: robot
-    title: 멀티 모델 채팅
-    details: OpenAI, Claude, Gemini, DeepSeek, Qwen 등 모든 호환 API에 연결. 멀티 키 로테이션, 스트리밍 출력, 사고 블록 지원.
-  - icon: thunderbolt
-    title: AI Agent (Beta)
-    details: Agent 모드로 자율적인 작업 수행. 파일 읽기/쓰기, 명령어 실행, 코드 분석——3단계 권한 제어 + 작업 디렉토리 샌드박스로 안전하게 제어.
+    title: "채팅 및 모델"
+    details: "OpenAI, Claude, Gemini, DeepSeek, Qwen 및 OpenAI 호환 엔드포인트를 Base URL, API Path, headers, proxy rules와 함께 연결합니다."
   - icon: api
-    title: MCP 도구 호출
-    details: Model Context Protocol 완전 구현. stdio, SSE, StreamableHTTP 지원. 원클릭으로 외부 도구 연결, @aqbot/fetch 등 내장 MCP 도구 제공.
-  - icon: cloud-server
-    title: 내장 API 게이트웨이
-    details: 로컬 OpenAI 호환 API 서버. Claude Code, Codex, Gemini CLI 등의 백엔드로 사용 가능. 키 관리, 속도 제한, SSL/TLS.
-  - icon: book
-    title: 지식 베이스 & RAG
-    details: sqlite-vec를 이용한 로컬 벡터 임베딩. 프라이빗 문서 기반 AI 답변, 데이터는 로컬에서 벗어나지 않습니다.
-  - icon: search
-    title: 웹 검색
-    details: Tavily, Zhipu WebSearch, Bocha 통합. 인용 출처가 포함된 검색 결과가 대화 컨텍스트에 자동 주입됩니다.
+    title: "제공업체 설정"
+    details: "aqbot:// provider links 및 CC Switch import로 사용자 확인 후 provider profiles를 AQBot으로 가져옵니다."
+  - icon: thunderbolt
+    title: "AI Agent"
+    details: "모델이 controlled workflow에서 files edit, commands run, code analysis를 수행합니다."
   - icon: edit
-    title: 풍부한 콘텐츠 렌더링
-    details: Markdown, LaTeX, Mermaid 다이어그램, D2 아키텍처 다이어그램, Monaco 코드 에디터(diff 미리보기), Artifact 패널.
-  - icon: desktop
-    title: 데스크톱 경험
-    details: 전역 단축키, 시스템 트레이, 자동 시작, 항상 위에 표시, 다크/라이트 테마, 프록시 지원.
+    title: "콘텐츠 렌더링"
+    details: "Markdown, code highlighting, tables, task lists, LaTeX를 streaming conversation에서 렌더링합니다."
+  - icon: search
+    title: "검색 및 지식"
+    details: "Tavily, Zhipu WebSearch, Bocha 등과 cited sources, generated queries를 지원합니다."
+  - icon: cloud-server
+    title: "API 게이트웨이"
+    details: "OpenAI Chat Completions, OpenAI Responses, Claude-native, Gemini-native endpoints를 desktop app에서 노출합니다."
+  - icon: book
+    title: "데이터 가져오기 및 백업"
+    details: "ChatGPT official exports, Cherry Studio backups, Kelivo backups를 preview counts, warnings, duplicate handling과 함께 가져옵니다."
   - icon: lock
-    title: 개인정보 & 보안
-    details: 모든 데이터 로컬 저장. AES-256으로 API 키 암호화. 로컬 또는 WebDAV로 자동 백업. PNG/Markdown/JSON으로 내보내기.
+    title: "데스크톱 및 보안"
+    details: "app state는 ~/.aqbot/, user files는 ~/Documents/aqbot/에 저장되며 API keys는 AES-256 local master key로 보호됩니다."
+  - icon: desktop
+    title: "데스크톱 및 보안"
+    details: "app state는 ~/.aqbot/, user files는 ~/Documents/aqbot/에 저장되며 API keys는 AES-256 local master key로 보호됩니다."
 ---
