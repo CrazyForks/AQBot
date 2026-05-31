@@ -65,7 +65,7 @@ export interface TranscriptExportOptions {
 
 function getExportMessageContent(message: Message, options?: TranscriptExportOptions) {
   if (options?.includeThinking === false) {
-    return stripAqbotTags(message.content)
+    return stripAqbotTags(message.content, { stripThink: message.role !== 'user' })
   }
   return message.content
 }

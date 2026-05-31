@@ -27,7 +27,13 @@ import { useResolvedDarkMode } from '@/hooks/useResolvedDarkMode';
 import { InputArea } from './InputArea';
 import { ModelSelector } from './ModelSelector';
 import { parseSearchContent } from '@/lib/searchUtils';
-import { CHAT_CUSTOM_HTML_TAGS, parseChatMarkdown, stripAqbotTags, type ChatMarkdownNode } from '@/lib/chatMarkdown';
+import {
+  CHAT_CUSTOM_HTML_TAGS,
+  safeParseChatMarkdown,
+  shouldUsePlainTextChatContent,
+  stripAqbotTags,
+  type ChatMarkdownNode,
+} from '@/lib/chatMarkdown';
 import { normalizeHtmlRenderContent } from '@/lib/chatHtmlRender';
 import { normalizeThinkTagsForMarkdown } from '@/lib/thinkTags';
 import {
@@ -87,6 +93,7 @@ import AskUserCard from './AskUserCard';
 import { ChatImageNode } from './ChatImageNode';
 import { HtmlRenderNode } from './HtmlRenderNode';
 import { formatChatTime } from './chatTime';
+import { ChatMessageRenderBoundary } from './ChatMessageRenderBoundary';
 
 import { invoke } from '@/lib/invoke';
 import { registerHighlight } from 'stream-markdown';
@@ -531,7 +538,7 @@ function ThinkNode(props: NodeComponentProps<{
     const cached = cache.get(thinkingContent);
     if (cached) return cached;
 
-    const parsed = parseChatMarkdown(thinkingContent);
+    const parsed = safeParseChatMarkdown(thinkingContent);
     cache.set(thinkingContent, parsed);
     if (cache.size > 24) {
       const firstKey = cache.keys().next().value;
@@ -1050,6 +1057,45 @@ function ToolCallNode(props: NodeComponentProps<{
 
 setCustomComponents('chat', { think: ThinkNode, 'web-search-query': WebSearchQueryNode, 'web-search': WebSearchNode, 'knowledge-retrieval': KnowledgeRetrievalNode, 'memory-retrieval': MemoryRetrievalNode, 'tool-call': ToolCallNode, 'html-render': withMarkstreamComponentDisplay(HtmlRenderNode, 'block'), d2: ChatD2Node, vmr_container: McpContainerNode, image: ChatImageNode, img: ChatImageNode });
 
+function stripAssistantAqbotTags(content: string) {
+  return stripAqbotTags(content, { stripThink: true });
+}
+
+function stripUserAqbotTags(content: string) {
+  return stripAqbotTags(content, { stripThink: false });
+}
+
+function PlainTextChatContent({
+  content,
+  textAlign,
+}: {
+  content: string;
+  textAlign?: React.CSSProperties['textAlign'];
+}) {
+  return (
+    <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign }}>
+      {content}
+    </div>
+  );
+}
+
+function MessageRenderFallback({
+  content,
+  notice,
+  textAlign,
+}: {
+  content: string;
+  notice: string;
+  textAlign?: React.CSSProperties['textAlign'];
+}) {
+  return (
+    <div>
+      <Alert type="warning" message={notice} showIcon style={{ marginBottom: 8 }} />
+      <PlainTextChatContent content={content} textAlign={textAlign} />
+    </div>
+  );
+}
+
 const AssistantMarkdown = React.memo(function AssistantMarkdown({
   content,
   nodes,
@@ -1104,7 +1150,7 @@ const AssistantMarkdown = React.memo(function AssistantMarkdown({
   }, [content, contentWithoutExplicitDisplay, displayPrefix, nodes]);
   const displayPrefixNodes = useMemo(() => (
     displaySplit.prefix
-      ? parseChatMarkdown(displaySplit.prefix)
+      ? safeParseChatMarkdown(displaySplit.prefix)
       : undefined
   ), [displaySplit.prefix]);
   const rendererContent = useMemo(
@@ -3167,7 +3213,7 @@ export function ChatView() {
         continue;
       }
 
-      const nodes = parseChatMarkdown(item.content);
+      const nodes = safeParseChatMarkdown(item.content);
       cache.set(messageId, { content: item.content, nodes });
       next.set(messageId, nodes);
     }
@@ -3239,6 +3285,37 @@ export function ChatView() {
   const userRole = useCallback((bubbleData: BubbleItemType) => {
     const msg = messageById.get(String(bubbleData.key));
     const attachments = msg?.attachments ?? [];
+    const renderUserContent = (content: string, textAlign?: React.CSSProperties['textAlign']) => {
+      if (!content) return null;
+      const renderAsMarkdown = settings.render_user_markdown && !shouldUsePlainTextChatContent(content, {
+        role: 'user',
+        isStreaming: false,
+      });
+      if (!renderAsMarkdown) {
+        return <PlainTextChatContent content={content} textAlign={textAlign} />;
+      }
+      return (
+        <ChatMessageRenderBoundary
+          fallback={(
+            <MessageRenderFallback
+              content={content}
+              notice={t('chat.messageRenderFallback', { defaultValue: '该消息渲染失败，已切换为纯文本' })}
+              textAlign={textAlign}
+            />
+          )}
+        >
+          <AssistantMarkdown
+            content={content}
+            isDarkMode={isDarkMode}
+            isStreaming={false}
+            codeBlockDarkTheme={codeBlockDarkTheme}
+            codeBlockLightTheme={codeBlockLightTheme}
+            codeBlockThemes={codeBlockThemes}
+            codeFontFamily={settings.code_font_family || undefined}
+          />
+        </ChatMessageRenderBoundary>
+      );
+    };
     return {
       placement: 'end' as const,
       ...getBubbleVariant(true),
@@ -3247,19 +3324,7 @@ export function ChatView() {
         ? (content: string) => (
             <div style={{ textAlign: 'right' }}>
               <span data-aqbot-msg={msg?.id} style={{ height: 0, overflow: 'hidden', lineHeight: 0 }} />
-              {content && (
-                settings.render_user_markdown
-                  ? <AssistantMarkdown
-                      content={content}
-                      isDarkMode={isDarkMode}
-                      isStreaming={false}
-                      codeBlockDarkTheme={codeBlockDarkTheme}
-                      codeBlockLightTheme={codeBlockLightTheme}
-                      codeBlockThemes={codeBlockThemes}
-                      codeFontFamily={settings.code_font_family || undefined}
-                    />
-                  : <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
-              )}
+              {renderUserContent(content, 'right')}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: content ? 8 : 0, justifyContent: 'flex-end' }}>
                 {attachments.map((att, i) => (
                   <AttachmentPreview
@@ -3274,18 +3339,7 @@ export function ChatView() {
         : (content: string) => (
             <>
               <span data-aqbot-msg={msg?.id} style={{ height: 0, overflow: 'hidden', lineHeight: 0 }} />
-              {settings.render_user_markdown
-                ? <AssistantMarkdown
-                    content={content}
-                    isDarkMode={isDarkMode}
-                    isStreaming={false}
-                    codeBlockDarkTheme={codeBlockDarkTheme}
-                    codeBlockLightTheme={codeBlockLightTheme}
-                    codeBlockThemes={codeBlockThemes}
-                    codeFontFamily={settings.code_font_family || undefined}
-                  />
-                : content
-              }
+              {renderUserContent(content)}
             </>
           ),
       header: (
@@ -3305,10 +3359,10 @@ export function ChatView() {
           items={[
             {
               key: 'copy',
-              icon: (() => { const ct = stripAqbotTags(String(bubbleData.content ?? '')); return isUserMsgCopied(ct) ? <Check size={14} style={{ color: token.colorSuccess }} /> : <Copy size={14} />; })(),
+              icon: (() => { const ct = stripUserAqbotTags(String(bubbleData.content ?? '')); return isUserMsgCopied(ct) ? <Check size={14} style={{ color: token.colorSuccess }} /> : <Copy size={14} />; })(),
               label: t('chat.copy'),
               onItemClick: () => {
-                void copyMessage(stripAqbotTags(String(bubbleData.content ?? ''))).then(ok => {
+                void copyMessage(stripUserAqbotTags(String(bubbleData.content ?? ''))).then(ok => {
                   if (ok) messageApi.success(t('chat.copied'));
                 });
               },
@@ -3412,7 +3466,7 @@ export function ChatView() {
       isStreaming,
       Boolean(msg?.id && contentRendererMessageIdsRef.current.has(msg.id)),
     );
-    const assistantCopyText = stripAqbotTags(msg?.content ?? (typeof bubbleData.content === 'string' ? bubbleData.content : ''));
+    const assistantCopyText = stripAssistantAqbotTags(msg?.content ?? (typeof bubbleData.content === 'string' ? bubbleData.content : ''));
     const searchDisplayPrefix = msg?.id ? searchDisplayByMessageId[msg.id] : undefined;
     const ragDisplayPrefix = msg?.id ? ragDisplayByMessageId[msg.id] : undefined;
     const displayPrefix = `${searchDisplayPrefix ?? ''}${ragDisplayPrefix ?? ''}` || undefined;
@@ -3420,7 +3474,7 @@ export function ChatView() {
       ? undefined
       : aiContentNodesById.get(String(bubbleData.key));
     const { footerLoading: rawFooterLoading } = getStreamingLoadingState(isStreaming, bubbleData.content);
-    const hasModelText = hasModelVisibleContent(bubbleData.content, stripAqbotTags);
+    const hasModelText = hasModelVisibleContent(bubbleData.content, stripAssistantAqbotTags);
     const footerLoading = rawFooterLoading && hasModelText;
     // Never let Ant Design Bubble's loading state replace AI content while a
     // stream is active; the markdown renderer receives incremental content and
@@ -3452,21 +3506,30 @@ export function ChatView() {
       if (versionMessage.status === 'error') {
         return <Alert type="error" message={versionContent} showIcon />;
       }
-      if (shouldShowInitialStreamingDots(versionIsStreaming, versionContent, stripAqbotTags)) {
+      if (shouldShowInitialStreamingDots(versionIsStreaming, versionContent, stripAssistantAqbotTags)) {
         return (
           renderStreamingStatusIndicator(streamActivityByMessageId[versionMessage.id], false)
         );
       }
       return (
-        <AssistantMarkdown
-          content={versionContent}
-          isDarkMode={isDarkMode}
-          isStreaming={versionIsStreaming}
-          codeBlockDarkTheme={codeBlockDarkTheme}
-          codeBlockLightTheme={codeBlockLightTheme}
-          codeBlockThemes={codeBlockThemes}
-          codeFontFamily={settings.code_font_family || undefined}
-        />
+        <ChatMessageRenderBoundary
+          fallback={(
+            <MessageRenderFallback
+              content={versionContent}
+              notice={t('chat.messageRenderFallback', { defaultValue: '该消息渲染失败，已切换为纯文本' })}
+            />
+          )}
+        >
+          <AssistantMarkdown
+            content={versionContent}
+            isDarkMode={isDarkMode}
+            isStreaming={versionIsStreaming}
+            codeBlockDarkTheme={codeBlockDarkTheme}
+            codeBlockLightTheme={codeBlockLightTheme}
+            codeBlockThemes={codeBlockThemes}
+            codeFontFamily={settings.code_font_family || undefined}
+          />
+        </ChatMessageRenderBoundary>
       );
     };
 
@@ -3483,7 +3546,7 @@ export function ChatView() {
         const effectiveDisplayPrefix = `${renderContentHasSearchDisplay ? '' : searchDisplayPrefix ?? ''}${ragDisplayPrefix ?? ''}` || undefined;
         const renderLoadingState = getStreamingLoadingState(isStreaming, renderContent);
         const hasDisplayContent = hasAqbotDisplayContent(renderContent) || Boolean(effectiveDisplayPrefix);
-        const hasRenderedModelText = hasModelVisibleContent(renderContent, stripAqbotTags);
+        const hasRenderedModelText = hasModelVisibleContent(renderContent, stripAssistantAqbotTags);
         const shouldShowInitialDots = renderLoadingState.bubbleLoading && !hasDisplayContent;
         const hasActiveThinkingOnly = Boolean(msg?.id && thinkingActiveMessageIds.has(msg.id) && !hasRenderedModelText);
         const shouldShowInlineStatus = shouldShowInlineStreamingStatus({
@@ -3534,15 +3597,24 @@ export function ChatView() {
             <>
               {msgMarker}
               {errorDisplay.prefix && (
-                <AssistantMarkdown
-                  content={errorDisplay.prefix}
-                  isDarkMode={isDarkMode}
-                  isStreaming={false}
-                  codeBlockDarkTheme={codeBlockDarkTheme}
-                  codeBlockLightTheme={codeBlockLightTheme}
-                  codeBlockThemes={codeBlockThemes}
-                  codeFontFamily={settings.code_font_family || undefined}
-                />
+                <ChatMessageRenderBoundary
+                  fallback={(
+                    <MessageRenderFallback
+                      content={errorDisplay.prefix}
+                      notice={t('chat.messageRenderFallback', { defaultValue: '该消息渲染失败，已切换为纯文本' })}
+                    />
+                  )}
+                >
+                  <AssistantMarkdown
+                    content={errorDisplay.prefix}
+                    isDarkMode={isDarkMode}
+                    isStreaming={false}
+                    codeBlockDarkTheme={codeBlockDarkTheme}
+                    codeBlockLightTheme={codeBlockLightTheme}
+                    codeBlockThemes={codeBlockThemes}
+                    codeFontFamily={settings.code_font_family || undefined}
+                  />
+                </ChatMessageRenderBoundary>
               )}
               <Alert type="error" message={errorDisplay.message} showIcon />
             </>
@@ -3584,17 +3656,26 @@ export function ChatView() {
         return (
           <>
             {msgMarker}
-            <AssistantMarkdown
-              content={renderContent}
-              nodes={parsedNodes}
-              isDarkMode={isDarkMode}
-              isStreaming={isStreaming}
-              codeBlockDarkTheme={codeBlockDarkTheme}
-              codeBlockLightTheme={codeBlockLightTheme}
-              codeBlockThemes={codeBlockThemes}
-              codeFontFamily={settings.code_font_family || undefined}
-              displayPrefix={effectiveDisplayPrefix}
-            />
+            <ChatMessageRenderBoundary
+              fallback={(
+                <MessageRenderFallback
+                  content={renderContent}
+                  notice={t('chat.messageRenderFallback', { defaultValue: '该消息渲染失败，已切换为纯文本' })}
+                />
+              )}
+            >
+              <AssistantMarkdown
+                content={renderContent}
+                nodes={parsedNodes}
+                isDarkMode={isDarkMode}
+                isStreaming={isStreaming}
+                codeBlockDarkTheme={codeBlockDarkTheme}
+                codeBlockLightTheme={codeBlockLightTheme}
+                codeBlockThemes={codeBlockThemes}
+                codeFontFamily={settings.code_font_family || undefined}
+                displayPrefix={effectiveDisplayPrefix}
+              />
+            </ChatMessageRenderBoundary>
             {!isAgentMsg && shouldShowInlineStatus && (
               <div style={{ marginTop: 8 }}>
                 {renderStreamingStatusIndicator(msgActivity, false)}

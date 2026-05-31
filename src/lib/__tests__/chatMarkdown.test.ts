@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseChatMarkdown, stripAqbotTags } from '../chatMarkdown';
+import {
+  parseChatMarkdown,
+  safeParseChatMarkdown,
+  shouldUsePlainTextChatContent,
+  stripAqbotTags,
+} from '../chatMarkdown';
 
 describe('parseChatMarkdown', () => {
   it('parses fenced code blocks into markdown nodes', () => {
@@ -122,5 +127,76 @@ Visible tail`);
     const content = '<html-render><div>visible html</div></html-render>';
 
     expect(stripAqbotTags(content)).toBe(content);
+  });
+
+  it('preserves user pasted think-like logs when think stripping is disabled', () => {
+    const content = 'before\n<think>literal user log</think>\nafter';
+
+    expect(stripAqbotTags(content, { stripThink: false })).toBe(content);
+    expect(stripAqbotTags(content, { stripThink: true })).toBe('before\nafter');
+  });
+
+  it('keeps malformed or non-aqbot display tags as literal transcript text', () => {
+    const content = [
+      'visible',
+      '<web-search status="done">user-visible</web-search>',
+      '<knowledge-retrieval data-aqbot="1">missing close',
+      '<tool-call data-aqbot="1">also missing close',
+      'tail',
+    ].join('\n');
+
+    expect(stripAqbotTags(content)).toBe(content);
+  });
+
+  it('strips only complete mcp fenced blocks and preserves incomplete user logs', () => {
+    const complete = 'before\n:::mcp tool\npayload\n:::\nafter';
+    const incomplete = 'before\n:::mcp tool\npayload\nafter';
+
+    expect(stripAqbotTags(complete)).toBe('before\nafter');
+    expect(stripAqbotTags(incomplete)).toBe(incomplete);
+  });
+
+  it('handles a 130kb malformed ai-system-log paste without dropping user text', () => {
+    const malformedLog = [
+      '<system-reminder>do not drop this',
+      '<user_input>keep this input',
+      '<think>literal log start',
+      ...Array.from({ length: 38 }, (_, index) => `<tool_call_${index}>${'x'.repeat(3200)}`),
+      'visible tail',
+    ].join('\n').slice(0, 130_268);
+
+    expect(() => stripAqbotTags(malformedLog, { stripThink: false })).not.toThrow();
+    const cleaned = stripAqbotTags(malformedLog, { stripThink: false });
+    expect(cleaned).toContain('<system-reminder>do not drop this');
+    expect(cleaned).toContain('<user_input>keep this input');
+    expect(cleaned).toContain('<think>literal log start');
+  });
+
+  it('classifies long malformed user logs for plain-text rendering', () => {
+    const content = [
+      '<system-reminder>open',
+      '<user_input>open',
+      ...Array.from({ length: 28 }, (_, index) => `<tag-${index}>${'x'.repeat(4000)}`),
+    ].join('\n');
+
+    expect(content.length).toBeGreaterThan(100_000);
+    expect(shouldUsePlainTextChatContent(content, { role: 'user', isStreaming: false })).toBe(true);
+    expect(shouldUsePlainTextChatContent('short <tag> log', { role: 'user', isStreaming: false })).toBe(false);
+    expect(shouldUsePlainTextChatContent(content, { role: 'assistant', isStreaming: false })).toBe(false);
+  });
+
+  it('returns plain text nodes from the safe parser when markdown parsing throws', () => {
+    const nodes = safeParseChatMarkdown('literal <broken>', {
+      parse: () => {
+        throw new Error('parser failed');
+      },
+    });
+
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({
+      type: 'paragraph',
+      raw: 'literal <broken>',
+    });
+    expect(JSON.stringify(nodes)).toContain('literal <broken>');
   });
 });

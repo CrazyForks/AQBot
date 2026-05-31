@@ -61,8 +61,8 @@ interface MinimapEntry {
 
 // ── Helpers ──
 
-function summarize(content: string, maxLen: number): string {
-  const stripped = stripAqbotTags(content)
+function summarize(content: string, maxLen: number, role: 'user' | 'assistant'): string {
+  const stripped = stripAqbotTags(content, { stripThink: role === 'assistant' })
     .replace(/```[\s\S]*?```/g, '[code]')
     .replace(/\n+/g, ' ')
     .trim();
@@ -95,7 +95,7 @@ function useEntries(): MinimapEntry[] {
           index: idx++,
           msg,
           role: 'user',
-          summary: summarize(msg.content, 30),
+          summary: summarize(msg.content, 30, 'user'),
         });
       } else if (msg.role === 'assistant') {
         const parentKey = msg.parent_message_id || msg.id;
@@ -104,7 +104,7 @@ function useEntries(): MinimapEntry[] {
           index: existing !== undefined ? entries[existing].index : idx++,
           msg,
           role: 'assistant',
-          summary: summarize(msg.content, 30),
+          summary: summarize(msg.content, 30, 'assistant'),
           modelId: msg.model_id,
           providerId: msg.provider_id,
         };
