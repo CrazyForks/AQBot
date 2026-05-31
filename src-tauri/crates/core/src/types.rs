@@ -10,6 +10,8 @@ where
     Option::<T>::deserialize(deserializer).map(Some)
 }
 
+pub const DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS: u32 = 100;
+
 // === Provider System ===
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -847,7 +849,7 @@ impl Default for AppSettings {
             inherit_conversation_preferences_on_create: true,
             chat_stream_first_packet_timeout_secs: 180,
             chat_stream_idle_timeout_secs: 90,
-            mcp_tool_loop_max_iterations: 10,
+            mcp_tool_loop_max_iterations: DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS,
             document_attachment_reading_enabled: false,
             show_image_models_in_model_selector: false,
             multi_model_display_mode: "tabs".to_string(),
@@ -907,9 +909,9 @@ mod app_settings_tests {
     }
 
     #[test]
-    fn mcp_tool_loop_max_iterations_defaults_to_10_and_roundtrips() {
+    fn mcp_tool_loop_max_iterations_defaults_to_100_and_roundtrips() {
         let settings = AppSettings::default();
-        assert_eq!(settings.mcp_tool_loop_max_iterations, 10);
+        assert_eq!(settings.mcp_tool_loop_max_iterations, 100);
 
         let settings: AppSettings = serde_json::from_value(json!({
             "mcp_tool_loop_max_iterations": 25
@@ -920,7 +922,7 @@ mod app_settings_tests {
 
         let settings: AppSettings =
             serde_json::from_value(json!({})).expect("settings should default missing fields");
-        assert_eq!(settings.mcp_tool_loop_max_iterations, 10);
+        assert_eq!(settings.mcp_tool_loop_max_iterations, 100);
     }
 
     #[test]

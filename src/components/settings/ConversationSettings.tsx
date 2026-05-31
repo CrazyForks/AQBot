@@ -1,6 +1,7 @@
 import { Divider, Input, InputNumber, Switch, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/stores';
+import { DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS } from '@/types';
 import { SettingsGroup } from './SettingsGroup';
 import { SettingsSelect } from './SettingsSelect';
 
@@ -13,8 +14,10 @@ function normalizeTimeoutSeconds(value: number | string | null) {
 }
 
 function normalizeMcpToolLoopMaxIterations(value: number | string | null) {
-  const numericValue = typeof value === 'number' ? value : Number(value ?? 10);
-  if (!Number.isFinite(numericValue)) return 10;
+  const numericValue = typeof value === 'number'
+    ? value
+    : Number(value ?? DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS);
+  if (!Number.isFinite(numericValue)) return DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS;
   return Math.min(100, Math.max(1, Math.floor(numericValue)));
 }
 
@@ -219,7 +222,7 @@ export function ConversationSettings() {
             min={1}
             max={100}
             step={1}
-            value={settings.mcp_tool_loop_max_iterations ?? 10}
+            value={settings.mcp_tool_loop_max_iterations ?? DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS}
             onChange={(value) => saveSettings({
               mcp_tool_loop_max_iterations: normalizeMcpToolLoopMaxIterations(value),
             })}

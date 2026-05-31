@@ -132,7 +132,7 @@ describe('ConversationSettings', () => {
       show_image_models_in_model_selector: false,
       chat_stream_first_packet_timeout_secs: 180,
       chat_stream_idle_timeout_secs: 90,
-      mcp_tool_loop_max_iterations: 10,
+      mcp_tool_loop_max_iterations: 100,
       chat_sidebar_collapsed: false,
     };
   });
@@ -230,7 +230,7 @@ describe('ConversationSettings', () => {
 
     fireEvent.change(screen.getByLabelText('MCP 工具调用最大轮次'), { target: { value: '' } });
     expect(mocks.saveSettings).toHaveBeenCalledWith({
-      mcp_tool_loop_max_iterations: 10,
+      mcp_tool_loop_max_iterations: 100,
     });
 
     fireEvent.change(screen.getByLabelText('MCP 工具调用最大轮次'), { target: { value: '1000' } });

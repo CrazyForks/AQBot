@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@/lib/invoke';
-import type { AppSettings } from '@/types';
+import { DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS, type AppSettings } from '@/types';
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/lib/shortcuts';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -89,7 +89,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   inherit_conversation_preferences_on_create: true,
   chat_stream_first_packet_timeout_secs: 180,
   chat_stream_idle_timeout_secs: 90,
-  mcp_tool_loop_max_iterations: 10,
+  mcp_tool_loop_max_iterations: DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS,
   document_attachment_reading_enabled: false,
   show_image_models_in_model_selector: false,
   multi_model_display_mode: 'tabs',

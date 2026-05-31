@@ -456,6 +456,8 @@ export interface GatewaySettings {
 }
 
 // === Settings ===
+export const DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS = 100;
+
 export interface AppSettings {
   language: string;
   theme_mode: string;
@@ -571,7 +573,7 @@ export interface AppSettings {
   chat_stream_first_packet_timeout_secs?: number;
   /** Timeout between chat stream packets in seconds. 0 disables. */
   chat_stream_idle_timeout_secs?: number;
-  /** Maximum provider/tool iterations in one MCP tool loop. Default: 10. */
+  /** Maximum provider/tool iterations in one MCP tool loop. Default: 100. */
   mcp_tool_loop_max_iterations?: number;
   /** Parse PDF/DOC/DOCX attachments and send extracted text to the model. Default: false */
   document_attachment_reading_enabled?: boolean;

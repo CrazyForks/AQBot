@@ -5170,7 +5170,7 @@ mod tests {
     #[test]
     fn mcp_tool_loop_limit_clamps_global_settings() {
         let mut settings = AppSettings::default();
-        assert_eq!(mcp_tool_loop_max_iterations_from_settings(&settings), 10);
+        assert_eq!(mcp_tool_loop_max_iterations_from_settings(&settings), 100);
 
         settings.mcp_tool_loop_max_iterations = 0;
         assert_eq!(mcp_tool_loop_max_iterations_from_settings(&settings), 1);
