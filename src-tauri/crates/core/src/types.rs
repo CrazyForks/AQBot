@@ -620,6 +620,14 @@ pub struct AppSettings {
     pub font_weight: u16,
     pub font_family: String,
     pub code_font_family: String,
+    /// Chat message content font size in px.
+    pub chat_font_size: u8,
+    /// Chat message content line height.
+    pub chat_line_height: f32,
+    /// Chat message content font family. Empty means system default.
+    pub chat_font_family: String,
+    /// Chat message content font weight.
+    pub chat_font_weight: u16,
     pub bubble_style: String,
     pub code_theme: String,
     pub code_theme_light: String,
@@ -753,6 +761,10 @@ impl Default for AppSettings {
             font_weight: 400,
             font_family: String::new(),
             code_font_family: String::new(),
+            chat_font_size: 15,
+            chat_line_height: 1.7,
+            chat_font_family: String::new(),
+            chat_font_weight: 400,
             bubble_style: "minimal".to_string(),
             code_theme: "poimandres".to_string(),
             code_theme_light: "github-light".to_string(),
@@ -906,6 +918,35 @@ mod app_settings_tests {
 
         assert_eq!(settings.chat_stream_first_packet_timeout_secs, 45);
         assert_eq!(settings.chat_stream_idle_timeout_secs, 12);
+    }
+
+    #[test]
+    fn chat_typography_defaults_and_roundtrips() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.chat_font_size, 15);
+        assert_eq!(settings.chat_line_height, 1.7);
+        assert_eq!(settings.chat_font_family, "");
+        assert_eq!(settings.chat_font_weight, 400);
+
+        let settings: AppSettings = serde_json::from_value(json!({
+            "chat_font_size": 18,
+            "chat_line_height": 1.8,
+            "chat_font_family": "Inter",
+            "chat_font_weight": 500
+        }))
+        .expect("settings should deserialize");
+
+        assert_eq!(settings.chat_font_size, 18);
+        assert_eq!(settings.chat_line_height, 1.8);
+        assert_eq!(settings.chat_font_family, "Inter");
+        assert_eq!(settings.chat_font_weight, 500);
+
+        let settings: AppSettings =
+            serde_json::from_value(json!({})).expect("settings should default missing fields");
+        assert_eq!(settings.chat_font_size, 15);
+        assert_eq!(settings.chat_line_height, 1.7);
+        assert_eq!(settings.chat_font_family, "");
+        assert_eq!(settings.chat_font_weight, 400);
     }
 
     #[test]

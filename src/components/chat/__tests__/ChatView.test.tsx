@@ -57,6 +57,26 @@ describe('ChatView assistant display policy', () => {
     expect(propsBlock).not.toMatch(/maxLiveNodes:\s*(?:0|Infinity),/);
   });
 
+  it('routes plain text and markdown messages through chat typography classes', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/chat/ChatView.tsx'), 'utf8');
+
+    expect(source).toContain('className="aqbot-chat-text"');
+    expect(source).toContain('className="aqbot-chat-markdown"');
+  });
+
+  it('defines chat typography CSS without overriding code font settings', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+    const chatBlock = source.match(/\.aqbot-chat-text,[\s\S]*?\.aqbot-chat-markdown \.markdown-renderer \{[\s\S]*?\}/)?.[0] ?? '';
+    const codeBlock = source.match(/\.aqbot-chat-markdown (?:pre|code)[\s\S]*?\}/)?.[0] ?? '';
+
+    expect(chatBlock).toContain('font-family: var(--chat-font-family');
+    expect(chatBlock).toContain('font-size: var(--chat-font-size');
+    expect(chatBlock).toContain('line-height: var(--chat-line-height');
+    expect(chatBlock).toContain('font-weight: var(--chat-font-weight');
+    expect(codeBlock).toContain('font-family: var(--code-font-family');
+    expect(codeBlock).not.toContain('--chat-font-family');
+  });
+
   it('resolves stable ai bubble keys through their parent message id', () => {
     const assistant = makeMessage({
       id: 'assistant-1',

@@ -1110,7 +1110,7 @@ function PlainTextChatContent({
   textAlign?: React.CSSProperties['textAlign'];
 }) {
   return (
-    <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign }}>
+    <div className="aqbot-chat-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign }}>
       {content}
     </div>
   );

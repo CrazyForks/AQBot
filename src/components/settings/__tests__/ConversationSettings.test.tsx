@@ -1,5 +1,5 @@
 import type React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppSettings } from '@/types';
 import { ConversationSettings } from '../ConversationSettings';
@@ -15,6 +15,10 @@ vi.mock('react-i18next', () => ({
     t: (key: string, fallback?: string) => {
       const labels: Record<string, string> = {
         'settings.additionalFeatures': '附加功能',
+        'settings.chatFontFamily': '对话字体',
+        'settings.chatFontSize': '对话字号',
+        'settings.chatFontWeight': '对话字重',
+        'settings.chatLineHeight': '对话行高',
         'settings.chatMinimap': '对话导航',
         'settings.newConversationDefaults': '新建对话',
         'settings.inheritConversationPreferencesOnCreate': '继承当前对话能力配置',
@@ -31,6 +35,9 @@ vi.mock('react-i18next', () => ({
         'settings.documentAttachmentReading': '读取文档附件',
         'settings.documentAttachmentReadingDesc': '开启后，PDF、DOC、DOCX 附件会解析为文本并发送给模型，不会加入知识库。',
         'settings.showImageModelsInModelSelector': '模型选择器中显示绘画模型',
+        'settings.codeFontFamily': '代码字体',
+        'settings.fontDefault': '系统默认',
+        'settings.groupMessageStyle': '消息样式',
       };
       return labels[key] ?? fallback ?? key;
     },
@@ -107,6 +114,29 @@ vi.mock('antd', () => {
   };
 });
 
+vi.mock('../SettingsSelect', () => ({
+  SettingsSelect: ({
+    value,
+    onChange,
+    options,
+  }: {
+    value?: string;
+    onChange?: (value: string) => void;
+    options: Array<{ label: React.ReactNode; value: string }>;
+  }) => (
+    <select
+      value={value ?? ''}
+      onChange={(event) => onChange?.(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 vi.mock('@/stores', () => ({
   useSettingsStore: (selector: (state: {
     settings: Partial<AppSettings>;
@@ -115,6 +145,11 @@ vi.mock('@/stores', () => ({
     settings,
     saveSettings: mocks.saveSettings,
   }),
+}));
+
+vi.mock('@/lib/invoke', () => ({
+  isTauri: () => true,
+  invoke: vi.fn().mockResolvedValue(['Inter', 'JetBrains Mono']),
 }));
 
 describe('ConversationSettings', () => {
@@ -134,6 +169,11 @@ describe('ConversationSettings', () => {
       chat_stream_idle_timeout_secs: 90,
       mcp_tool_loop_max_iterations: 100,
       chat_sidebar_collapsed: false,
+      code_font_family: '',
+      chat_font_size: 15,
+      chat_line_height: 1.7,
+      chat_font_family: '',
+      chat_font_weight: 400,
     };
   });
 
@@ -152,6 +192,50 @@ describe('ConversationSettings', () => {
     expect(screen.getByText('开启后，PDF、DOC、DOCX 附件会解析为文本并发送给模型，不会加入知识库。')).toBeInTheDocument();
     expect(within(additionalGroup as HTMLElement).getByText('MCP 工具调用最大轮次')).toBeInTheDocument();
     expect(within(timeoutGroup as HTMLElement).queryByText('MCP 工具调用最大轮次')).not.toBeInTheDocument();
+  });
+
+  it('renders chat typography controls in conversation message style', () => {
+    render(<ConversationSettings />);
+
+    const messageStyleGroup = screen.getByText('消息样式').parentElement?.parentElement;
+    expect(messageStyleGroup).not.toBeNull();
+    expect(within(messageStyleGroup as HTMLElement).getByText('对话字号')).toBeInTheDocument();
+    expect(within(messageStyleGroup as HTMLElement).getByText('对话行高')).toBeInTheDocument();
+    expect(within(messageStyleGroup as HTMLElement).getByText('对话字体')).toBeInTheDocument();
+    expect(within(messageStyleGroup as HTMLElement).getByText('对话字重')).toBeInTheDocument();
+    expect(within(messageStyleGroup as HTMLElement).getByText('代码字体')).toBeInTheDocument();
+  });
+
+  it('saves normalized chat typography settings', () => {
+    render(<ConversationSettings />);
+
+    fireEvent.change(screen.getByLabelText('对话字号'), { target: { value: '28' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_font_size: 22 });
+
+    fireEvent.change(screen.getByLabelText('对话行高'), { target: { value: '1.05' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_line_height: 1.3 });
+
+    fireEvent.change(screen.getByLabelText('对话字重'), { target: { value: '950' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_font_weight: 700 });
+  });
+
+  it('saves chat and code font family settings from conversation settings', async () => {
+    settings = {
+      ...settings,
+      chat_font_family: '',
+      code_font_family: '',
+    };
+
+    render(<ConversationSettings />);
+
+    let selects = screen.getAllByRole('combobox');
+    await waitFor(() => expect(selects[1]).toHaveTextContent('Inter'));
+    selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[1], { target: { value: 'Inter' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_font_family: 'Inter' });
+
+    fireEvent.change(selects[2], { target: { value: 'JetBrains Mono' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ code_font_family: 'JetBrains Mono' });
   });
 
   it('saves the document attachment reading setting when toggled', () => {

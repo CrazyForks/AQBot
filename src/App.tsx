@@ -23,6 +23,7 @@ import './i18n';
 
 const { Sider, Content } = Layout;
 const { useToken } = theme;
+const DEFAULT_CHAT_FONT_FAMILY = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 /** Show the main window (it starts hidden to avoid white flash). */
 async function showWindow() {
@@ -143,6 +144,10 @@ function AppRoot() {
   const fontWeight = useSettingsStore((s) => s.settings.font_weight);
   const fontFamily = useSettingsStore((s) => s.settings.font_family);
   const codeFontFamily = useSettingsStore((s) => s.settings.code_font_family);
+  const chatFontSize = useSettingsStore((s) => s.settings.chat_font_size);
+  const chatLineHeight = useSettingsStore((s) => s.settings.chat_line_height);
+  const chatFontFamily = useSettingsStore((s) => s.settings.chat_font_family);
+  const chatFontWeight = useSettingsStore((s) => s.settings.chat_font_weight);
   const borderRadius = useSettingsStore((s) => s.settings.border_radius);
   const language = useSettingsStore((s) => s.settings.language);
   const isDark = useResolvedDarkMode(themeMode);
@@ -248,7 +253,11 @@ function AppRoot() {
     } else {
       root.style.removeProperty('--code-font-family');
     }
-  }, [fontWeight, fontFamily, codeFontFamily]);
+    root.style.setProperty('--chat-font-size', `${chatFontSize ?? 15}px`);
+    root.style.setProperty('--chat-line-height', String(chatLineHeight ?? 1.7));
+    root.style.setProperty('--chat-font-family', chatFontFamily || DEFAULT_CHAT_FONT_FAMILY);
+    root.style.setProperty('--chat-font-weight', String(chatFontWeight ?? 400));
+  }, [fontWeight, fontFamily, codeFontFamily, chatFontSize, chatLineHeight, chatFontFamily, chatFontWeight]);
 
   const themeConfig = useShadcnTheme(isDark, primaryColor, fontSize, borderRadius, fontFamily || undefined, codeFontFamily || undefined);
 

@@ -470,6 +470,44 @@ html[data-theme="dark"] .markstream-react .thematic-break {
   border-top-color: var(--hr-border-color, var(--border-color));
 }
 
+.aqbot-chat-text,
+.aqbot-chat-markdown,
+.aqbot-chat-markdown .markdown-renderer {
+  font-family: var(--chat-font-family, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: var(--chat-font-size, 15px);
+  line-height: var(--chat-line-height, 1.7);
+  font-weight: var(--chat-font-weight, 400);
+  color: var(--chat-text-color, var(--color-text));
+}
+
+html[data-theme="dark"] {
+  --chat-text-color: rgba(255, 255, 255, 0.9);
+}
+
+.aqbot-chat-markdown p,
+.aqbot-chat-markdown .paragraph-node {
+  margin-block: 0.45em;
+}
+
+.aqbot-chat-markdown ul,
+.aqbot-chat-markdown ol {
+  margin-block: 0.55em;
+  padding-inline-start: 1.45em;
+}
+
+.aqbot-chat-markdown li + li {
+  margin-top: 0.2em;
+}
+
+.aqbot-chat-markdown blockquote {
+  margin-block: 0.7em;
+}
+
+.aqbot-chat-markdown pre,
+.aqbot-chat-markdown code {
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace);
+}
+
 /* Chat markdown runs inside a Tauri WebView where `content-visibility:auto`
  * can leave freshly completed assistant content unpainted until the next
  * scroll/repaint. Keep chat message renderers painted in this shell only. */

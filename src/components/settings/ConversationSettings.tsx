@@ -2,10 +2,17 @@ import { Divider, Input, InputNumber, Switch, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/stores';
 import { DEFAULT_MCP_TOOL_LOOP_MAX_ITERATIONS } from '@/types';
+import { useSystemFonts } from '@/hooks/useSystemFonts';
 import { SettingsGroup } from './SettingsGroup';
 import { SettingsSelect } from './SettingsSelect';
 
 const { TextArea } = Input;
+const CHAT_FONT_SIZE_MIN = 12;
+const CHAT_FONT_SIZE_MAX = 22;
+const CHAT_LINE_HEIGHT_MIN = 1.3;
+const CHAT_LINE_HEIGHT_MAX = 2.0;
+const CHAT_FONT_WEIGHT_MIN = 300;
+const CHAT_FONT_WEIGHT_MAX = 700;
 
 function normalizeTimeoutSeconds(value: number | string | null) {
   const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
@@ -21,12 +28,37 @@ function normalizeMcpToolLoopMaxIterations(value: number | string | null) {
   return Math.min(100, Math.max(1, Math.floor(numericValue)));
 }
 
+function normalizeChatFontSize(value: number | string | null) {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 15);
+  if (!Number.isFinite(numericValue)) return 15;
+  return Math.min(CHAT_FONT_SIZE_MAX, Math.max(CHAT_FONT_SIZE_MIN, Math.round(numericValue)));
+}
+
+function normalizeChatLineHeight(value: number | string | null) {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 1.7);
+  if (!Number.isFinite(numericValue)) return 1.7;
+  const clamped = Math.min(CHAT_LINE_HEIGHT_MAX, Math.max(CHAT_LINE_HEIGHT_MIN, numericValue));
+  return Math.round(clamped * 10) / 10;
+}
+
+function normalizeChatFontWeight(value: number | string | null) {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 400);
+  if (!Number.isFinite(numericValue)) return 400;
+  return Math.min(CHAT_FONT_WEIGHT_MAX, Math.max(CHAT_FONT_WEIGHT_MIN, Math.round(numericValue)));
+}
+
 export function ConversationSettings() {
   const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const saveSettings = useSettingsStore((s) => s.saveSettings);
   const { token } = theme.useToken();
+  const systemFonts = useSystemFonts();
   const rowStyle = { padding: '4px 0' };
+
+  const fontOptions = [
+    { label: t('settings.fontDefault'), value: '' },
+    ...systemFonts.map((font) => ({ label: font, value: font })),
+  ];
 
   return (
     <div style={{ padding: 24 }}>
@@ -53,6 +85,72 @@ export function ConversationSettings() {
               { label: t('settings.bubbleCompact'), value: 'compact' },
               { label: t('settings.bubbleMinimal'), value: 'minimal' },
             ]}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <span>{t('settings.chatFontSize')}</span>
+          <InputNumber
+            aria-label={t('settings.chatFontSize')}
+            min={CHAT_FONT_SIZE_MIN}
+            max={CHAT_FONT_SIZE_MAX}
+            step={1}
+            value={settings.chat_font_size ?? 15}
+            onChange={(value) => saveSettings({
+              chat_font_size: normalizeChatFontSize(value),
+            })}
+            addonAfter="px"
+            style={{ width: 120 }}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <span>{t('settings.chatLineHeight')}</span>
+          <InputNumber
+            aria-label={t('settings.chatLineHeight')}
+            min={CHAT_LINE_HEIGHT_MIN}
+            max={CHAT_LINE_HEIGHT_MAX}
+            step={0.1}
+            value={settings.chat_line_height ?? 1.7}
+            onChange={(value) => saveSettings({
+              chat_line_height: normalizeChatLineHeight(value),
+            })}
+            style={{ width: 120 }}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <span>{t('settings.chatFontFamily')}</span>
+          <SettingsSelect
+            searchable
+            value={settings.chat_font_family || ''}
+            onChange={(val) => saveSettings({ chat_font_family: val })}
+            options={fontOptions}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <span>{t('settings.chatFontWeight')}</span>
+          <InputNumber
+            aria-label={t('settings.chatFontWeight')}
+            min={CHAT_FONT_WEIGHT_MIN}
+            max={CHAT_FONT_WEIGHT_MAX}
+            step={100}
+            value={settings.chat_font_weight ?? 400}
+            onChange={(value) => saveSettings({
+              chat_font_weight: normalizeChatFontWeight(value),
+            })}
+            style={{ width: 120 }}
+          />
+        </div>
+        <Divider style={{ margin: '4px 0' }} />
+        <div className="flex items-center justify-between" style={rowStyle}>
+          <span>{t('settings.codeFontFamily')}</span>
+          <SettingsSelect
+            searchable
+            value={settings.code_font_family || ''}
+            onChange={(val) => saveSettings({ code_font_family: val })}
+            options={fontOptions}
           />
         </div>
         <Divider style={{ margin: '4px 0' }} />

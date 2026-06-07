@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const enableD2 = vi.fn();
@@ -10,6 +10,13 @@ const settingsState = {
     theme_mode: 'dark',
     primary_color: '#17A93D',
     font_size: 14,
+    font_weight: 400,
+    font_family: '',
+    code_font_family: '',
+    chat_font_size: 16,
+    chat_line_height: 1.8,
+    chat_font_family: 'Inter',
+    chat_font_weight: 500,
     border_radius: 8,
     language: 'zh-CN',
     always_on_top: false,
@@ -21,15 +28,37 @@ const settingsState = {
     global_shortcut: '',
   },
   fetchSettings: vi.fn().mockResolvedValue(undefined),
+  setGlobalShortcutStatus: vi.fn(),
 };
 
 const uiState = {
   activePage: 'chat',
+  enterSettings: vi.fn(),
+  setSettingsSection: vi.fn(),
+  setSelectedProviderId: vi.fn(),
+};
+
+const providerState = {
+  importProviderFromDeepLink: vi.fn(),
+  fetchProviders: vi.fn(),
+};
+
+const conversationState = {
+  startStreamListening: vi.fn(),
+  stopStreamListening: vi.fn(),
 };
 
 vi.mock('antd', () => ({
   ConfigProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  App: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  App: Object.assign(
+    ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    {
+      useApp: () => ({
+        modal: {},
+        message: {},
+      }),
+    },
+  ),
   Layout: Object.assign(
     ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     {
@@ -94,6 +123,8 @@ vi.mock('@/hooks/useCommandPalette', () => ({
 
 vi.mock('@/stores', () => ({
   useUIStore: (selector: (state: typeof uiState) => unknown) => selector(uiState),
+  useProviderStore: (selector: (state: typeof providerState) => unknown) => selector(providerState),
+  useConversationStore: (selector: (state: typeof conversationState) => unknown) => selector(conversationState),
   useSettingsStore: Object.assign(
     (selector: (state: typeof settingsState) => unknown) => selector(settingsState),
     {
@@ -130,6 +161,7 @@ vi.mock('markstream-react', () => ({
 describe('AppRoot D2 setup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.documentElement.style.cssText = '';
   });
 
   it('enables the markstream D2 loader during startup', async () => {
@@ -139,5 +171,18 @@ describe('AppRoot D2 setup', () => {
 
     expect(enableD2).toHaveBeenCalledTimes(1);
     expect(preloadChatRenderers).toHaveBeenCalledTimes(1);
+  });
+
+  it('syncs chat typography settings to CSS variables', async () => {
+    const { default: AppRoot } = await import('../App');
+
+    render(<AppRoot />);
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--chat-font-size')).toBe('16px');
+      expect(document.documentElement.style.getPropertyValue('--chat-line-height')).toBe('1.8');
+      expect(document.documentElement.style.getPropertyValue('--chat-font-family')).toBe('Inter');
+      expect(document.documentElement.style.getPropertyValue('--chat-font-weight')).toBe('500');
+    });
   });
 });

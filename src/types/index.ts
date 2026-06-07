@@ -470,6 +470,10 @@ export interface AppSettings {
   font_weight: number;
   font_family: string;
   code_font_family: string;
+  chat_font_size: number;
+  chat_line_height: number;
+  chat_font_family: string;
+  chat_font_weight: number;
   bubble_style: string;
   code_theme: string;
   code_theme_light: string;
