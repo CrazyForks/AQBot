@@ -803,11 +803,11 @@ impl Default for AppSettings {
             chat_font_family: String::new(),
             chat_font_weight: 400,
             bubble_style: "minimal".to_string(),
-            chat_user_message_area_style: "background".to_string(),
+            chat_user_message_area_style: "none".to_string(),
             chat_user_message_area_light_color: "rgba(0, 0, 0, 0)".to_string(),
             chat_user_message_area_dark_color: "rgba(0, 0, 0, 0)".to_string(),
             chat_user_message_area_border_width: 1,
-            chat_ai_message_area_style: "background".to_string(),
+            chat_ai_message_area_style: "none".to_string(),
             chat_ai_message_area_light_color: "#f5f5f5".to_string(),
             chat_ai_message_area_dark_color: "rgba(255, 255, 255, 0.06)".to_string(),
             chat_ai_message_area_border_width: 1,
@@ -975,11 +975,11 @@ mod app_settings_tests {
         assert_eq!(settings.chat_line_height, 1.7);
         assert_eq!(settings.chat_font_family, "");
         assert_eq!(settings.chat_font_weight, 400);
-        assert_eq!(settings.chat_user_message_area_style, "background");
+        assert_eq!(settings.chat_user_message_area_style, "none");
         assert_eq!(settings.chat_user_message_area_light_color, "rgba(0, 0, 0, 0)");
         assert_eq!(settings.chat_user_message_area_dark_color, "rgba(0, 0, 0, 0)");
         assert_eq!(settings.chat_user_message_area_border_width, 1);
-        assert_eq!(settings.chat_ai_message_area_style, "background");
+        assert_eq!(settings.chat_ai_message_area_style, "none");
         assert_eq!(settings.chat_ai_message_area_light_color, "#f5f5f5");
         assert_eq!(settings.chat_ai_message_area_dark_color, "rgba(255, 255, 255, 0.06)");
         assert_eq!(settings.chat_ai_message_area_border_width, 1);
@@ -1019,11 +1019,11 @@ mod app_settings_tests {
         assert_eq!(settings.chat_line_height, 1.7);
         assert_eq!(settings.chat_font_family, "");
         assert_eq!(settings.chat_font_weight, 400);
-        assert_eq!(settings.chat_user_message_area_style, "background");
+        assert_eq!(settings.chat_user_message_area_style, "none");
         assert_eq!(settings.chat_user_message_area_light_color, "rgba(0, 0, 0, 0)");
         assert_eq!(settings.chat_user_message_area_dark_color, "rgba(0, 0, 0, 0)");
         assert_eq!(settings.chat_user_message_area_border_width, 1);
-        assert_eq!(settings.chat_ai_message_area_style, "background");
+        assert_eq!(settings.chat_ai_message_area_style, "none");
         assert_eq!(settings.chat_ai_message_area_light_color, "#f5f5f5");
         assert_eq!(settings.chat_ai_message_area_dark_color, "rgba(255, 255, 255, 0.06)");
         assert_eq!(settings.chat_ai_message_area_border_width, 1);

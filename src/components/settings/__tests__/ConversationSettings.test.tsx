@@ -252,11 +252,11 @@ describe('ConversationSettings', () => {
       chat_line_height: 1.7,
       chat_font_family: '',
       chat_font_weight: 400,
-      chat_user_message_area_style: 'background',
+      chat_user_message_area_style: 'none',
       chat_user_message_area_light_color: 'rgba(0, 0, 0, 0)',
       chat_user_message_area_dark_color: 'rgba(0, 0, 0, 0)',
       chat_user_message_area_border_width: 1,
-      chat_ai_message_area_style: 'background',
+      chat_ai_message_area_style: 'none',
       chat_ai_message_area_light_color: '#f5f5f5',
       chat_ai_message_area_dark_color: 'rgba(255, 255, 255, 0.06)',
       chat_ai_message_area_border_width: 1,
@@ -308,16 +308,20 @@ describe('ConversationSettings', () => {
     expect(screen.getByLabelText('用户消息暗黑颜色')).toHaveValue('rgba(0, 0, 0, 0)');
     expect(screen.getByLabelText('AI 消息日光颜色')).toHaveValue('#f5f5f5');
     expect(screen.getByLabelText('AI 消息暗黑颜色')).toHaveValue('rgba(255, 255, 255, 0.06)');
+    expect(screen.getByLabelText('用户消息日光颜色')).toBeDisabled();
+    expect(screen.getByLabelText('用户消息暗黑颜色')).toBeDisabled();
+    expect(screen.getByLabelText('AI 消息日光颜色')).toBeDisabled();
+    expect(screen.getByLabelText('AI 消息暗黑颜色')).toBeDisabled();
     expect(screen.getByLabelText('用户消息边框粗细')).toBeDisabled();
     expect(screen.getByLabelText('AI 消息边框粗细')).toBeDisabled();
 
     const [userStyleSelect, aiStyleSelect] = within(areaGroup).getAllByRole('combobox');
-    expect(userStyleSelect).toHaveValue('background');
-    expect(aiStyleSelect).toHaveValue('background');
+    expect(userStyleSelect).toHaveValue('none');
+    expect(aiStyleSelect).toHaveValue('none');
     fireEvent.change(userStyleSelect, { target: { value: 'border' } });
     expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_user_message_area_style: 'border' });
-    fireEvent.change(aiStyleSelect, { target: { value: 'none' } });
-    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_ai_message_area_style: 'none' });
+    fireEvent.change(aiStyleSelect, { target: { value: 'background' } });
+    expect(mocks.saveSettings).toHaveBeenCalledWith({ chat_ai_message_area_style: 'background' });
 
     settings = {
       ...settings,

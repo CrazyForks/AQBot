@@ -84,6 +84,8 @@ describe('ChatView assistant display policy', () => {
     expect(source).toContain("userMessageAreaStyle === 'border'");
     expect(source).toContain("aiMessageAreaStyle === 'background'");
     expect(source).toContain("aiMessageAreaStyle === 'border'");
+    expect(source).toContain("settings.chat_user_message_area_style ?? 'none'");
+    expect(source).toContain("settings.chat_ai_message_area_style ?? 'none'");
     expect(source).toContain("'--chat-user-message-area-color': isDarkMode");
     expect(source).toContain("'--chat-ai-message-area-color': isDarkMode");
     expect(source).toContain('.bubble-user-background .ant-bubble-end .ant-bubble-content');

@@ -2138,8 +2138,8 @@ export function ChatView() {
     [settings.code_theme, settings.code_theme_light],
   );
   const bubbleListThemeKey = `bubble-list:${isDarkMode ? 'dark' : 'light'}:${settings.code_theme ?? ''}:${settings.code_theme_light ?? ''}`;
-  const userMessageAreaStyle = settings.chat_user_message_area_style ?? 'background';
-  const aiMessageAreaStyle = settings.chat_ai_message_area_style ?? 'background';
+  const userMessageAreaStyle = settings.chat_user_message_area_style ?? 'none';
+  const aiMessageAreaStyle = settings.chat_ai_message_area_style ?? 'none';
   const userMessageAreaBorderWidth = Math.min(4, Math.max(1, Math.round(settings.chat_user_message_area_border_width ?? 1)));
   const aiMessageAreaBorderWidth = Math.min(4, Math.max(1, Math.round(settings.chat_ai_message_area_border_width ?? 1)));
   const userMessageAreaClass = userMessageAreaStyle === 'background'

@@ -130,8 +130,8 @@ export function ConversationSettings() {
     { label: t('settings.fontDefault'), value: '' },
     ...systemFonts.map((font) => ({ label: font, value: font })),
   ];
-  const userMessageAreaStyle = settings.chat_user_message_area_style ?? 'background';
-  const aiMessageAreaStyle = settings.chat_ai_message_area_style ?? 'background';
+  const userMessageAreaStyle = settings.chat_user_message_area_style ?? 'none';
+  const aiMessageAreaStyle = settings.chat_ai_message_area_style ?? 'none';
   const messageAreaStyleOptions = [
     { label: t('settings.messageAreaStyleNone'), value: 'none' },
     { label: t('settings.messageAreaStyleBackground'), value: 'background' },
