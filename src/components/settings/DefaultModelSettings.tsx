@@ -153,9 +153,9 @@ function ModelParamsModal({
 
       <ModelParamSliders
         values={{
-          temperature: (settings[temperatureKey] as number | null) ?? defaultTemperature,
-          topP: (settings[topPKey] as number | null) ?? defaultTopP,
-          maxTokens: (settings[maxTokensKey] as number | null) ?? defaultMaxTokens,
+          temperature: settings[temperatureKey] as number | null,
+          topP: settings[topPKey] as number | null,
+          maxTokens: settings[maxTokensKey] as number | null,
           frequencyPenalty: null,
         }}
         onChange={(v) => {

@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   setSelectedProviderId: vi.fn(),
   invoke: vi.fn(),
   testModel: vi.fn(),
+  modelParamSliders: vi.fn(),
 }));
 
 vi.setConfig({ testTimeout: 15000 });
@@ -112,7 +113,10 @@ vi.mock('@/components/shared/DynamicLobeIcon', () => ({
 }));
 
 vi.mock('@/components/common/ModelParamSliders', () => ({
-  ModelParamSliders: () => <div>model-param-sliders</div>,
+  ModelParamSliders: (props: Record<string, unknown>) => {
+    mocks.modelParamSliders(props);
+    return <div>model-param-sliders</div>;
+  },
 }));
 
 vi.mock('@/components/common/CopyButton', () => ({
@@ -415,6 +419,25 @@ describe('ProviderDetail', () => {
 
     expect(mocks.updateModelParams).not.toHaveBeenCalled();
     expect(within(dialog).getByText('settings.extraBodyReservedError')).toBeInTheDocument();
+  });
+
+  it('keeps missing model parameter overrides disabled in model settings', async () => {
+    render(
+      <App>
+        <ProviderDetail providerId="provider-1" />
+      </App>,
+    );
+
+    await openFirstModelSettings();
+
+    const calls = mocks.modelParamSliders.mock.calls;
+    const props = calls[calls.length - 1]?.[0] as { values?: unknown } | undefined;
+    expect(props?.values).toEqual({
+      temperature: null,
+      topP: null,
+      maxTokens: null,
+      frequencyPenalty: null,
+    });
   });
 
   it('syncs remote models without overwriting existing local model settings', async () => {
