@@ -1,7 +1,7 @@
 use crate::paths::aqbot_home;
 use crate::AppState;
 use aqbot_core::types::*;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use tauri::State;
 
 fn home_dir() -> PathBuf {
@@ -12,10 +12,93 @@ fn skills_dir() -> PathBuf {
     aqbot_home().join("skills")
 }
 
+fn codex_skills_dir() -> PathBuf {
+    home_dir().join(".codex").join("skills")
+}
+
+fn claude_skills_dir() -> PathBuf {
+    home_dir().join(".claude").join("skills")
+}
+
+fn agents_skills_dir() -> PathBuf {
+    home_dir().join(".agents").join("skills")
+}
+
+fn skill_roots() -> [PathBuf; 4] {
+    [
+        skills_dir(),
+        claude_skills_dir(),
+        agents_skills_dir(),
+        codex_skills_dir(),
+    ]
+}
+
+fn install_target_dir(target: Option<&str>) -> PathBuf {
+    match target {
+        Some("codex") => codex_skills_dir(),
+        Some("claude") => claude_skills_dir(),
+        Some("agents") => agents_skills_dir(),
+        _ => skills_dir(),
+    }
+}
+
+fn source_root(source: &str) -> Option<PathBuf> {
+    match source {
+        "aqbot" => Some(skills_dir()),
+        "codex" => Some(codex_skills_dir()),
+        "claude" => Some(claude_skills_dir()),
+        "agents" => Some(agents_skills_dir()),
+        _ => None,
+    }
+}
+
+fn skill_target_dir(target_dir: &Path, name: &str) -> Result<PathBuf, String> {
+    let mut components = Path::new(name).components();
+    match (components.next(), components.next()) {
+        (Some(Component::Normal(_)), None) => Ok(target_dir.join(name)),
+        _ => Err(format!("Invalid skill directory name: {}", name)),
+    }
+}
+
+fn ensure_removable_skill_dir(skill_dir: &Path) -> Result<(), String> {
+    if !skill_dir.is_dir() {
+        return Err(format!(
+            "Skill directory does not exist: {}",
+            skill_dir.display()
+        ));
+    }
+
+    let skill_dir = std::fs::canonicalize(skill_dir).map_err(|e| e.to_string())?;
+    for root in skill_roots() {
+        let Ok(root) = std::fs::canonicalize(root) else {
+            continue;
+        };
+        if skill_dir == root {
+            return Err("Refusing to remove a skills root directory".to_string());
+        }
+        if skill_dir.starts_with(&root) {
+            let relative = skill_dir.strip_prefix(&root).map_err(|e| e.to_string())?;
+            let hidden = relative.components().any(|component| match component {
+                Component::Normal(name) => name.to_string_lossy().starts_with('.'),
+                _ => false,
+            });
+            if hidden {
+                return Err("Refusing to remove a hidden skills directory".to_string());
+            }
+            return Ok(());
+        }
+    }
+
+    Err(format!(
+        "Skill directory is outside managed skills roots: {}",
+        skill_dir.display()
+    ))
+}
+
 #[tauri::command]
 pub async fn list_skills(state: State<'_, AppState>) -> Result<Vec<SkillInfo>, String> {
     let home = home_dir();
-    let skills = open_agent_sdk::skills::load_all_global(&home);
+    let skills = open_agent_sdk::skills::load_all_global_for_management(&home);
     let disabled = aqbot_core::repo::skill::get_disabled_skills(&state.sea_db)
         .await
         .map_err(|e| e.to_string())?;
@@ -57,12 +140,22 @@ pub async fn list_skills(state: State<'_, AppState>) -> Result<Vec<SkillInfo>, S
 }
 
 #[tauri::command]
-pub async fn get_skill(state: State<'_, AppState>, name: String) -> Result<SkillDetail, String> {
+pub async fn get_skill(
+    state: State<'_, AppState>,
+    name: String,
+    source_path: Option<String>,
+) -> Result<SkillDetail, String> {
     let home = home_dir();
-    let skills = open_agent_sdk::skills::load_all_global(&home);
+    let skills = open_agent_sdk::skills::load_all_global_for_management(&home);
+    let source_path = source_path.map(PathBuf::from);
     let skill = skills
         .into_iter()
-        .find(|s| s.name == name)
+        .find(|s| {
+            source_path
+                .as_ref()
+                .map(|path| s.path == *path)
+                .unwrap_or_else(|| s.name == name)
+        })
         .ok_or_else(|| format!("Skill '{}' not found", name))?;
 
     let disabled = aqbot_core::repo::skill::get_disabled_skills(&state.sea_db)
@@ -135,11 +228,7 @@ pub async fn toggle_skill(
 
 #[tauri::command]
 pub async fn install_skill(source: String, target: Option<String>) -> Result<String, String> {
-    let target_dir = match target.as_deref() {
-        Some("claude") => home_dir().join(".claude").join("skills"),
-        Some("agents") => home_dir().join(".agents").join("skills"),
-        _ => skills_dir(),
-    };
+    let target_dir = install_target_dir(target.as_deref());
     std::fs::create_dir_all(&target_dir).map_err(|e| e.to_string())?;
 
     if source.starts_with('/') || source.starts_with('.') {
@@ -213,7 +302,7 @@ async fn install_from_github(owner: &str, repo: &str, target_dir: &Path) -> Resu
         .map_err(|e| format!("Failed to extract: {}", e))?;
 
     let extracted = temp_dir.path().join(&top_dir);
-    let skill_target = target_dir.join(repo);
+    let skill_target = skill_target_dir(target_dir, repo)?;
 
     if skill_target.exists() {
         std::fs::remove_dir_all(&skill_target).map_err(|e| e.to_string())?;
@@ -254,7 +343,7 @@ async fn install_from_local(source: &str, target_dir: &Path) -> Result<String, S
         .to_string_lossy()
         .to_string();
 
-    let skill_target = target_dir.join(&name);
+    let skill_target = skill_target_dir(target_dir, &name)?;
     if skill_target.exists() {
         std::fs::remove_dir_all(&skill_target).map_err(|e| e.to_string())?;
     }
@@ -293,28 +382,40 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn uninstall_skill(name: String) -> Result<(), String> {
-    let skill_dir = skills_dir().join(&name);
+pub async fn uninstall_skill(name: String, source_path: Option<String>) -> Result<(), String> {
+    let skill_dir = if let Some(source_path) = source_path {
+        let path = PathBuf::from(source_path);
+        if path.is_dir() {
+            path
+        } else {
+            path.parent()
+                .ok_or_else(|| "Invalid skill source path".to_string())?
+                .to_path_buf()
+        }
+    } else {
+        skills_dir().join(&name)
+    };
     if !skill_dir.exists() {
         return Err(format!("Skill '{}' not found in ~/.aqbot/skills/", name));
     }
+    ensure_removable_skill_dir(&skill_dir)?;
     std::fs::remove_dir_all(&skill_dir).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn uninstall_skill_group(group: String) -> Result<(), String> {
+pub async fn uninstall_skill_group(group: String, source: Option<String>) -> Result<(), String> {
     // Search all skill roots for a directory matching the group name
-    let home = home_dir();
-    let search_dirs = [
-        home.join(".aqbot").join("skills"),
-        home.join(".claude").join("skills"),
-        home.join(".agents").join("skills"),
-    ];
+    let roots = source
+        .as_deref()
+        .and_then(source_root)
+        .map(|root| vec![root])
+        .unwrap_or_else(|| skill_roots().to_vec());
 
-    for parent in &search_dirs {
+    for parent in roots {
         let group_dir = parent.join(&group);
         if group_dir.exists() && group_dir.is_dir() {
+            ensure_removable_skill_dir(&group_dir)?;
             std::fs::remove_dir_all(&group_dir).map_err(|e| e.to_string())?;
             return Ok(());
         }
@@ -348,19 +449,12 @@ pub async fn open_skill_dir(path: String) -> Result<(), String> {
 }
 
 /// Collect `source_ref` values from `skill-manifest.json` files across all
-/// three global skill directories so marketplace results can be marked as
+/// global skill directories so marketplace results can be marked as
 /// installed regardless of the directory name.
 fn installed_source_refs() -> std::collections::HashSet<String> {
-    let home = home_dir();
-    let dirs = [
-        home.join(".aqbot").join("skills"),
-        home.join(".claude").join("skills"),
-        home.join(".agents").join("skills"),
-    ];
-
     let mut refs = std::collections::HashSet::new();
-    for dir in &dirs {
-        collect_source_refs(dir, &mut refs, /* depth */ 0);
+    for dir in skill_roots() {
+        collect_source_refs(&dir, &mut refs, /* depth */ 0);
     }
     refs
 }
@@ -497,75 +591,76 @@ pub async fn search_marketplace(
 
 #[tauri::command]
 pub async fn check_skill_updates() -> Result<Vec<SkillUpdateInfo>, String> {
-    let skills_path = skills_dir();
     let mut updates = Vec::new();
 
-    let entries = match std::fs::read_dir(&skills_path) {
-        Ok(e) => e,
-        Err(_) => return Ok(updates),
-    };
-
-    for entry in entries.flatten() {
-        let manifest_path = entry.path().join("skill-manifest.json");
-        if !manifest_path.exists() {
-            continue;
-        }
-
-        let manifest_str = match std::fs::read_to_string(&manifest_path) {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
-        let manifest: serde_json::Value = match serde_json::from_str(&manifest_str) {
-            Ok(v) => v,
+    for skills_path in skill_roots() {
+        let entries = match std::fs::read_dir(&skills_path) {
+            Ok(e) => e,
             Err(_) => continue,
         };
 
-        if manifest["source_kind"].as_str() != Some("github") {
-            continue;
-        }
+        for entry in entries.flatten() {
+            let manifest_path = entry.path().join("skill-manifest.json");
+            if !manifest_path.exists() {
+                continue;
+            }
 
-        let source_ref = manifest["source_ref"].as_str().unwrap_or("").to_string();
-        let current_commit = manifest["commit"].as_str().unwrap_or("").to_string();
+            let manifest_str = match std::fs::read_to_string(&manifest_path) {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            let manifest: serde_json::Value = match serde_json::from_str(&manifest_str) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
 
-        if source_ref.is_empty() || current_commit.is_empty() {
-            continue;
-        }
+            if manifest["source_kind"].as_str() != Some("github") {
+                continue;
+            }
 
-        let parts: Vec<&str> = source_ref.split('/').collect();
-        if parts.len() != 2 {
-            continue;
-        }
+            let source_ref = manifest["source_ref"].as_str().unwrap_or("").to_string();
+            let current_commit = manifest["commit"].as_str().unwrap_or("").to_string();
 
-        let url = format!(
-            "https://api.github.com/repos/{}/{}/commits?per_page=1",
-            parts[0], parts[1]
-        );
+            if source_ref.is_empty() || current_commit.is_empty() {
+                continue;
+            }
 
-        let client = reqwest::Client::new();
-        let response = client
-            .get(&url)
-            .header("User-Agent", "AQBot")
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await;
+            let parts: Vec<&str> = source_ref.split('/').collect();
+            if parts.len() != 2 {
+                continue;
+            }
 
-        if let Ok(resp) = response {
-            if resp.status().is_success() {
-                if let Ok(body) = resp.json::<serde_json::Value>().await {
-                    if let Some(commits) = body.as_array() {
-                        if let Some(latest) = commits.first() {
-                            let latest_sha = latest["sha"].as_str().unwrap_or("").to_string();
-                            let short_latest = &latest_sha[..7.min(latest_sha.len())];
-                            if !current_commit.is_empty()
-                                && !latest_sha.starts_with(&current_commit)
-                                && current_commit != short_latest
-                            {
-                                updates.push(SkillUpdateInfo {
-                                    name: entry.file_name().to_string_lossy().to_string(),
-                                    current_commit: current_commit.clone(),
-                                    latest_commit: short_latest.to_string(),
-                                    source_ref: source_ref.clone(),
-                                });
+            let url = format!(
+                "https://api.github.com/repos/{}/{}/commits?per_page=1",
+                parts[0], parts[1]
+            );
+
+            let client = reqwest::Client::new();
+            let response = client
+                .get(&url)
+                .header("User-Agent", "AQBot")
+                .header("Accept", "application/vnd.github.v3+json")
+                .send()
+                .await;
+
+            if let Ok(resp) = response {
+                if resp.status().is_success() {
+                    if let Ok(body) = resp.json::<serde_json::Value>().await {
+                        if let Some(commits) = body.as_array() {
+                            if let Some(latest) = commits.first() {
+                                let latest_sha = latest["sha"].as_str().unwrap_or("").to_string();
+                                let short_latest = &latest_sha[..7.min(latest_sha.len())];
+                                if !current_commit.is_empty()
+                                    && !latest_sha.starts_with(&current_commit)
+                                    && current_commit != short_latest
+                                {
+                                    updates.push(SkillUpdateInfo {
+                                        name: entry.file_name().to_string_lossy().to_string(),
+                                        current_commit: current_commit.clone(),
+                                        latest_commit: short_latest.to_string(),
+                                        source_ref: source_ref.clone(),
+                                    });
+                                }
                             }
                         }
                     }

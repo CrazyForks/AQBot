@@ -1280,6 +1280,7 @@
     "detail": "スキル詳細",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "ビルトイン",

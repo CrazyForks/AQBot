@@ -1291,6 +1291,7 @@
     "detail": "技能詳情",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "內建",

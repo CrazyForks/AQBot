@@ -1280,6 +1280,7 @@
     "detail": "Detalles de la habilidad",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "Integrado",

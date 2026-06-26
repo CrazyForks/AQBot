@@ -7,7 +7,7 @@ import {
   FolderOpen, RefreshCw, Download, Trash2, Sparkles, Store, Star, Github,
   ChevronRight, Layers, Radio,
 } from 'lucide-react';
-import { Claude } from '@lobehub/icons';
+import { Claude, Codex } from '@lobehub/icons';
 import appLogo from '@/assets/image/logo.png';
 import { useTranslation } from 'react-i18next';
 import { useSkillStore } from '@/stores';
@@ -16,9 +16,13 @@ import { CopyButton } from '@/components/common/CopyButton';
 
 const INSTALL_TARGETS = [
   { key: 'aqbot', label: '~/.aqbot/skills/', desc: 'AQBot', icon: <Sparkles size={14} /> },
+  { key: 'codex', label: '~/.codex/skills/', desc: 'Codex', icon: <Codex.Avatar size={14} /> },
   { key: 'claude', label: '~/.claude/skills/', desc: 'Claude', icon: <FolderOpen size={14} /> },
   { key: 'agents', label: '~/.agents/skills/', desc: 'Agents', icon: <FolderOpen size={14} /> },
 ] as const;
+
+type SkillInstallTarget = typeof INSTALL_TARGETS[number]['key'];
+type SourceFilter = 'all' | SkillInstallTarget;
 
 const openExternalUrl = (url: string) => {
   import('@tauri-apps/plugin-opener')
@@ -32,6 +36,7 @@ const { Text, Paragraph } = Typography;
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
   aqbot: <img src={appLogo} alt="" style={{ width: 14, height: 14, verticalAlign: 'middle' }} />,
+  codex: <Codex.Avatar size={14} />,
   claude: <Claude.Color size={14} />,
   agents: <Radio size={14} />,
 };
@@ -48,8 +53,8 @@ function SkillCard({
 }: {
   skill: Skill;
   onToggle: (name: string, enabled: boolean) => void;
-  onDetail: (name: string) => void;
-  onUninstall: (name: string) => void;
+  onDetail: (name: string, sourcePath: string) => void;
+  onUninstall: (name: string, sourcePath: string) => void;
   onOpenDir: (path: string) => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
@@ -63,7 +68,7 @@ function SkillCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Text strong className="skill-card-title" style={{ cursor: 'pointer' }} onClick={() => onDetail(skill.name)}>
+            <Text strong className="skill-card-title" style={{ cursor: 'pointer' }} onClick={() => onDetail(skill.name, skill.sourcePath)}>
               {skill.name}
             </Text>
             <CopyButton text={skill.name} size={12} />
@@ -81,7 +86,7 @@ function SkillCard({
             type="secondary"
             ellipsis={{ rows: 2 }}
             style={{ marginBottom: 0, fontSize: 13, cursor: 'pointer' }}
-            onClick={() => onDetail(skill.name)}
+            onClick={() => onDetail(skill.name, skill.sourcePath)}
           >
             {skill.description}
           </Paragraph>
@@ -104,7 +109,7 @@ function SkillCard({
           {skill.source !== 'builtin' && (
             <Popconfirm
               title={t('skills.uninstallConfirm', { name: skill.name })}
-              onConfirm={() => onUninstall(skill.name)}
+              onConfirm={() => onUninstall(skill.name, skill.sourcePath)}
               okText={t('skills.uninstall')}
               cancelText={t('common.cancel')}
             >
@@ -236,7 +241,7 @@ export function SkillsPage() {
   const [marketplaceDetailOpen, setMarketplaceDetailOpen] = useState(false);
   const [marketplaceDetailContent, setMarketplaceDetailContent] = useState<{ name: string; repo: string; content: string } | null>(null);
   const [marketplaceDetailLoading, setMarketplaceDetailLoading] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'aqbot' | 'claude' | 'agents'>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
 
   useEffect(() => {
     loadSkills();
@@ -286,8 +291,8 @@ export function SkillsPage() {
     toggleSkill(name, enabled);
   }, [toggleSkill]);
 
-  const handleDetail = useCallback(async (name: string) => {
-    await getSkill(name);
+  const handleDetail = useCallback(async (name: string, sourcePath: string) => {
+    await getSkill(name, sourcePath);
     setDetailOpen(true);
   }, [getSkill]);
 
@@ -308,9 +313,9 @@ export function SkillsPage() {
     }
   }, [marketplaceSkills]);
 
-  const handleUninstall = useCallback(async (name: string) => {
+  const handleUninstall = useCallback(async (name: string, sourcePath: string) => {
     try {
-      await uninstallSkill(name);
+      await uninstallSkill(name, sourcePath);
       messageApi.success(t('skills.uninstallSuccess', { name }));
     } catch (e) {
       messageApi.error(String(e));
@@ -331,9 +336,9 @@ export function SkillsPage() {
     }
   }, [toggleSkill]);
 
-  const handleUninstallGroup = useCallback(async (group: string) => {
+  const handleUninstallGroup = useCallback(async (group: string, source?: string) => {
     try {
-      await uninstallSkillGroup(group);
+      await uninstallSkillGroup(group, source);
       messageApi.success(t('skills.uninstallSuccess', { name: group }));
     } catch (e) {
       messageApi.error(String(e));
@@ -350,9 +355,10 @@ export function SkillsPage() {
     const ungrouped: Skill[] = [];
     for (const skill of filteredSkills) {
       if (skill.group) {
-        const arr = groups.get(skill.group) || [];
+        const groupKey = `${skill.source}:${skill.group}`;
+        const arr = groups.get(groupKey) || [];
         arr.push(skill);
-        groups.set(skill.group, arr);
+        groups.set(groupKey, arr);
       } else {
         ungrouped.push(skill);
       }
@@ -360,9 +366,9 @@ export function SkillsPage() {
     return { groups, ungrouped };
   }, [filteredSkills]);
 
-  const handleOpenGroupDir = useCallback(async (group: string) => {
+  const handleOpenGroupDir = useCallback(async (groupKey: string) => {
     // Find the first skill in the group and open its parent's parent dir
-    const groupSkills = groupedSkills.groups.get(group);
+    const groupSkills = groupedSkills.groups.get(groupKey);
     if (groupSkills && groupSkills.length > 0) {
       const firstSkillPath = groupSkills[0].sourcePath;
       // sourcePath points to SKILL.md; go up two levels to the group dir
@@ -414,10 +420,11 @@ export function SkillsPage() {
         <Tabs
           size="small"
           activeKey={sourceFilter}
-          onChange={(k) => setSourceFilter(k as 'all' | 'aqbot' | 'claude' | 'agents')}
+          onChange={(k) => setSourceFilter(k as SourceFilter)}
           items={[
             { key: 'all', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{ALL_SOURCE_ICON}{t('skills.sourceAll')}</span> },
             { key: 'aqbot', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{SOURCE_ICONS.aqbot}AQBot</span> },
+            { key: 'codex', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{SOURCE_ICONS.codex}Codex</span> },
             { key: 'claude', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{SOURCE_ICONS.claude}Claude</span> },
             { key: 'agents', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{SOURCE_ICONS.agents}Agents</span> },
           ]}
@@ -469,7 +476,7 @@ export function SkillsPage() {
           <>
             {groupedSkills.ungrouped.map((skill) => (
               <SkillCard
-                key={skill.name}
+                key={skill.sourcePath}
                 skill={skill}
                 onToggle={handleToggle}
                 onDetail={handleDetail}
@@ -478,12 +485,13 @@ export function SkillsPage() {
                 t={t}
               />
             ))}
-            {Array.from(groupedSkills.groups.entries()).map(([group, groupSkills]) => {
+            {Array.from(groupedSkills.groups.entries()).map(([groupKey, groupSkills]) => {
+              const group = groupSkills[0]?.group ?? groupKey;
               const allEnabled = groupSkills.every((s) => s.enabled);
               const someEnabled = groupSkills.some((s) => s.enabled);
               return (
                 <Collapse
-                  key={group}
+                  key={groupKey}
                   defaultActiveKey={[]}
                   style={{ marginTop: 8 }}
                   expandIcon={({ isActive }) => (
@@ -496,7 +504,7 @@ export function SkillsPage() {
                     />
                   )}
                   items={[{
-                    key: group,
+                    key: groupKey,
                     label: (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, lineHeight: 1 }}>
                         <Text strong style={{ lineHeight: '22px' }}>{group}</Text>
@@ -521,11 +529,11 @@ export function SkillsPage() {
                           type="text"
                           size="small"
                           icon={<FolderOpen size={14} />}
-                          onClick={(e) => { e.stopPropagation(); handleOpenGroupDir(group); }}
+                          onClick={(e) => { e.stopPropagation(); handleOpenGroupDir(groupKey); }}
                         />
                         <Popconfirm
                           title={t('skills.uninstallGroupConfirm', { name: group })}
-                          onConfirm={() => handleUninstallGroup(group)}
+                          onConfirm={() => handleUninstallGroup(group, groupSkills[0]?.source)}
                           okText={t('skills.uninstall')}
                           cancelText={t('common.cancel')}
                         >
@@ -543,7 +551,7 @@ export function SkillsPage() {
                       <div style={{ padding: '4px 0' }}>
                         {groupSkills.map((skill) => (
                           <SkillCard
-                            key={skill.name}
+                            key={skill.sourcePath}
                             skill={skill}
                             onToggle={handleToggle}
                             onDetail={handleDetail}

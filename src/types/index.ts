@@ -812,7 +812,7 @@ export interface Skill {
   description: string;
   author?: string;
   version?: string;
-  source: 'builtin' | 'aqbot' | 'claude' | 'agents' | 'project';
+  source: 'builtin' | 'aqbot' | 'codex' | 'claude' | 'agents' | 'project';
   sourcePath: string;
   enabled: boolean;
   hasUpdate: boolean;

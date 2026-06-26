@@ -1280,6 +1280,7 @@
     "detail": "Детали навыка",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "Встроенный",

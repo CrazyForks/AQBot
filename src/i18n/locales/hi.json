@@ -1280,6 +1280,7 @@
     "detail": "कौशल विवरण",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "बिल्ट-इन",

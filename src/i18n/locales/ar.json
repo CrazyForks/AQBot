@@ -1280,6 +1280,7 @@
     "detail": "تفاصيل المهارة",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "مدمج",

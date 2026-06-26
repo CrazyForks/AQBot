@@ -10,11 +10,11 @@ interface SkillState {
   selectedSkill: SkillDetail | null;
 
   loadSkills: () => Promise<void>;
-  getSkill: (name: string) => Promise<void>;
+  getSkill: (name: string, sourcePath?: string) => Promise<void>;
   toggleSkill: (name: string, enabled: boolean) => Promise<void>;
   installSkill: (source: string, target?: string) => Promise<string>;
-  uninstallSkill: (name: string) => Promise<void>;
-  uninstallSkillGroup: (group: string) => Promise<void>;
+  uninstallSkill: (name: string, sourcePath?: string) => Promise<void>;
+  uninstallSkillGroup: (group: string, source?: string) => Promise<void>;
   openSkillsDir: () => Promise<void>;
   openSkillDir: (path: string) => Promise<void>;
   searchMarketplace: (query: string, source?: string) => Promise<void>;
@@ -40,9 +40,9 @@ export const useSkillStore = create<SkillState>((set, get) => ({
     }
   },
 
-  getSkill: async (name: string) => {
+  getSkill: async (name: string, sourcePath?: string) => {
     try {
-      const detail = await invoke<SkillDetail>('get_skill', { name });
+      const detail = await invoke<SkillDetail>('get_skill', { name, sourcePath: sourcePath ?? null });
       set({ selectedSkill: detail });
     } catch (e) {
       console.error('Failed to get skill:', e);
@@ -79,14 +79,14 @@ export const useSkillStore = create<SkillState>((set, get) => ({
     return name;
   },
 
-  uninstallSkill: async (name: string) => {
-    await invoke('uninstall_skill', { name });
-    set({ skills: get().skills.filter(s => s.name !== name) });
+  uninstallSkill: async (name: string, sourcePath?: string) => {
+    await invoke('uninstall_skill', { name, sourcePath: sourcePath ?? null });
+    set({ skills: get().skills.filter(s => (sourcePath ? s.sourcePath !== sourcePath : s.name !== name)) });
   },
 
-  uninstallSkillGroup: async (group: string) => {
-    await invoke('uninstall_skill_group', { group });
-    set({ skills: get().skills.filter(s => s.group !== group) });
+  uninstallSkillGroup: async (group: string, source?: string) => {
+    await invoke('uninstall_skill_group', { group, source: source ?? null });
+    set({ skills: get().skills.filter(s => s.group !== group || (source && s.source !== source)) });
   },
 
   openSkillsDir: async () => {

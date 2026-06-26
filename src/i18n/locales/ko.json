@@ -1280,6 +1280,7 @@
     "detail": "스킬 상세",
     "source": {
       "aqbot": "AQBot",
+      "codex": "Codex",
       "claude": "Claude",
       "agents": "Agents",
       "builtin": "기본 제공",

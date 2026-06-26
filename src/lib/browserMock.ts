@@ -1647,15 +1647,25 @@ export async function handleCommand<T>(cmd: string, args?: Record<string, unknow
 
     // ── Skills ────────────────────────────────────────────────────────
     case 'list_skills':
-      return [] as T;
+      return [
+        {
+          name: 'codex-demo',
+          description: 'Example Codex skill',
+          source: 'codex',
+          sourcePath: '/Users/demo/.codex/skills/codex-demo/SKILL.md',
+          enabled: true,
+          hasUpdate: false,
+          userInvocable: true,
+        },
+      ] as T;
 
     case 'get_skill':
       return {
         info: {
           name: (args as any)?.name || 'example',
           description: 'Example skill',
-          source: 'aqbot',
-          sourcePath: '/mock/path',
+          source: 'codex',
+          sourcePath: (args as any)?.sourcePath || '/Users/demo/.codex/skills/codex-demo/SKILL.md',
           enabled: true,
           hasUpdate: false,
           userInvocable: true,
