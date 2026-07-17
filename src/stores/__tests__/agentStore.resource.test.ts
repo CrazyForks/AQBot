@@ -70,6 +70,29 @@ describe('agentStore tool history resource', () => {
     expect(invokeMock).toHaveBeenCalledTimes(AGENT_CACHE_MAX_CONVERSATIONS + 2);
   });
 
+  it('clears the conversation status when a tool finishes', async () => {
+    const { useAgentStore } = await import('../agentStore');
+    const store = useAgentStore.getState();
+    store.handleStatus('conv-status', 'running');
+    store.handleToolStart({
+      conversationId: 'conv-status',
+      assistantMessageId: 'message-status',
+      toolUseId: 'tool-status',
+      toolName: 'bash',
+      input: {},
+    });
+    store.handleToolResult({
+      conversationId: 'conv-status',
+      assistantMessageId: 'message-status',
+      toolUseId: 'tool-status',
+      toolName: 'bash',
+      content: 'done',
+      isError: false,
+    });
+
+    expect(useAgentStore.getState().agentStatus['conv-status']).toBeUndefined();
+  });
+
   it('protects visible and pending conversations while pruning settled background state', async () => {
     const { useAgentStore } = await import('../agentStore');
     useAgentStore.getState().setVisibleConversation('visible');
