@@ -35,6 +35,7 @@ import { getEditableCapabilities, getVisibleModelCapabilities, sanitizeModelCapa
 import { IconEditor } from '@/components/shared/IconEditor';
 import { DynamicLobeIcon } from '@/components/shared/DynamicLobeIcon';
 import type {
+  ImageAdapterConfig,
   Model,
   ModelCapability,
   ModelCatalogStatus,
@@ -45,6 +46,7 @@ import type {
 import { ModelParamSliders } from '@/components/common/ModelParamSliders';
 import { CopyButton } from '@/components/common/CopyButton';
 import { ModelCatalogStatusBar } from './ModelCatalogStatusBar';
+import { ImageProtocolEditor } from './ImageProtocolEditor';
 
 const { Text, Title } = Typography;
 
@@ -351,6 +353,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
   const [editThinkingParamStyle, setEditThinkingParamStyle] = useState<string>('reasoning_effort');
   const [editExtraBody, setEditExtraBody] = useState('');
   const [editExtraBodyError, setEditExtraBodyError] = useState<string | null>(null);
+  const [editImageConfig, setEditImageConfig] = useState<ImageAdapterConfig | null>(null);
   const [iconOverrides, setIconOverrides] = useState<Record<string, string>>({});
   const [apiHostLocal, setApiHostLocal] = useState(provider?.api_host ?? '');
   const [apiPathLocal, setApiPathLocal] = useState(provider?.api_path ?? '');
@@ -786,6 +789,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
       setEditThinkingParamStyle(model.param_overrides?.reasoning_profile ?? model.param_overrides?.thinking_param_style ?? 'reasoning_effort');
       setEditExtraBody(formatExtraBody(model.param_overrides?.extra_body));
       setEditExtraBodyError(null);
+      setEditImageConfig(model.image_config ?? null);
       setSettingsModalOpen(true);
     },
     [],
@@ -793,38 +797,47 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
 
   const handleSaveSettings = useCallback(async () => {
     if (!editingModel) return;
-    const parsedExtraBody = parseExtraBodyInput(editExtraBody);
-    if (parsedExtraBody.errorKey) {
-      setEditExtraBodyError(parsedExtraBody.errorKey);
-      return;
+    const isImageModel = editModelType === 'Image';
+    let values = editingModel.param_overrides;
+    if (!isImageModel) {
+      const parsedExtraBody = parseExtraBodyInput(editExtraBody);
+      if (parsedExtraBody.errorKey) {
+        setEditExtraBodyError(parsedExtraBody.errorKey);
+        return;
+      }
+      values = {
+        temperature: editTemperature ?? undefined,
+        max_tokens: editMaxTokensParam ?? undefined,
+        top_p: editTopP ?? undefined,
+        frequency_penalty: editFreqPenalty ?? undefined,
+        use_max_completion_tokens: editUseMaxCompletionTokens,
+        no_system_role: editNoSystemRole,
+        force_max_tokens: editForceMaxTokens,
+        thinking_param_style: editThinkingParamStyle === 'enable_thinking' || editThinkingParamStyle === 'none'
+          ? editThinkingParamStyle
+          : undefined,
+        reasoning_profile: normalizeReasoningProfile(editThinkingParamStyle),
+        extra_body: parsedExtraBody.value,
+      };
     }
-    const values: ModelParamOverrides = {
-      temperature: editTemperature ?? undefined,
-      max_tokens: editMaxTokensParam ?? undefined,
-      top_p: editTopP ?? undefined,
-      frequency_penalty: editFreqPenalty ?? undefined,
-      use_max_completion_tokens: editUseMaxCompletionTokens,
-      no_system_role: editNoSystemRole,
-      force_max_tokens: editForceMaxTokens,
-      thinking_param_style: editThinkingParamStyle === 'enable_thinking' || editThinkingParamStyle === 'none'
-        ? editThinkingParamStyle
-        : undefined,
-      reasoning_profile: normalizeReasoningProfile(editThinkingParamStyle),
-      extra_body: parsedExtraBody.value,
-    };
     const nextCapabilities = sanitizeModelCapabilities(editModelType, editCapabilities);
     try {
-      await updateModelParams(providerId, editingModel.model_id, values);
+      if (!isImageModel) {
+        await updateModelParams(providerId, editingModel.model_id, values ?? {});
+      }
       // Update capabilities locally via saveModels
       const updatedModels = (provider?.models ?? []).map((m) =>
         m.model_id === editingModel.model_id
           ? {
-            ...m,
-            capabilities: nextCapabilities,
-            context_window: editContextWindow,
-            model_type: editModelType,
-            param_overrides: values,
-          }
+              ...m,
+              capabilities: nextCapabilities,
+              context_window: isImageModel
+                ? editingModel.context_window
+                : editContextWindow,
+              model_type: editModelType,
+              param_overrides: values,
+              image_config: isImageModel ? editImageConfig : m.image_config,
+            }
           : m,
       );
       await saveModels(providerId, updatedModels);
@@ -833,7 +846,7 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
     } catch {
       message.error(t('error.saveFailed'));
     }
-  }, [editingModel, editCapabilities, editContextWindow, editModelType, editTemperature, editMaxTokensParam, editTopP, editFreqPenalty, editUseMaxCompletionTokens, editNoSystemRole, editForceMaxTokens, editThinkingParamStyle, editExtraBody, providerId, updateModelParams, saveModels, provider?.models, message, t]);
+  }, [editingModel, editCapabilities, editContextWindow, editModelType, editTemperature, editMaxTokensParam, editTopP, editFreqPenalty, editUseMaxCompletionTokens, editNoSystemRole, editForceMaxTokens, editThinkingParamStyle, editExtraBody, editImageConfig, providerId, updateModelParams, saveModels, provider?.models, message, t]);
 
   const handleApiHostChange = useCallback(
     (value: string) => {
@@ -964,27 +977,30 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
         updated.model_type = batchModelType;
         updated.capabilities = sanitizeModelCapabilities(batchModelType, batchCapabilitiesEnabled ? batchCapabilities : updated.capabilities);
       }
-      if (batchCapabilitiesEnabled && !batchModelTypeEnabled) {
+      const isImageModel = updated.model_type === 'Image';
+      if (batchCapabilitiesEnabled && !batchModelTypeEnabled && !isImageModel) {
         updated.capabilities = sanitizeModelCapabilities(updated.model_type || 'Chat', batchCapabilities);
       }
-      if (batchContextWindowEnabled) {
+      if (batchContextWindowEnabled && !isImageModel) {
         updated.context_window = batchContextWindow;
       }
-      const overrides: ModelParamOverrides = { ...(updated.param_overrides ?? {}) };
-      if (batchTemperatureEnabled) overrides.temperature = batchTemperature;
-      if (batchTopPEnabled) overrides.top_p = batchTopP;
-      if (batchMaxTokensParamEnabled) overrides.max_tokens = batchMaxTokensParam;
-      if (batchFreqPenaltyEnabled) overrides.frequency_penalty = batchFreqPenalty;
-      if (batchUseMaxCompletionTokensEnabled) overrides.use_max_completion_tokens = batchUseMaxCompletionTokens;
-      if (batchNoSystemRoleEnabled) overrides.no_system_role = batchNoSystemRole;
-      if (batchForceMaxTokensEnabled) overrides.force_max_tokens = batchForceMaxTokens;
-      if (batchThinkingParamStyleEnabled) {
-        overrides.thinking_param_style = batchThinkingParamStyle === 'enable_thinking' || batchThinkingParamStyle === 'none'
-          ? batchThinkingParamStyle
-          : undefined;
-        overrides.reasoning_profile = normalizeReasoningProfile(batchThinkingParamStyle);
+      if (!isImageModel) {
+        const overrides: ModelParamOverrides = { ...(updated.param_overrides ?? {}) };
+        if (batchTemperatureEnabled) overrides.temperature = batchTemperature;
+        if (batchTopPEnabled) overrides.top_p = batchTopP;
+        if (batchMaxTokensParamEnabled) overrides.max_tokens = batchMaxTokensParam;
+        if (batchFreqPenaltyEnabled) overrides.frequency_penalty = batchFreqPenalty;
+        if (batchUseMaxCompletionTokensEnabled) overrides.use_max_completion_tokens = batchUseMaxCompletionTokens;
+        if (batchNoSystemRoleEnabled) overrides.no_system_role = batchNoSystemRole;
+        if (batchForceMaxTokensEnabled) overrides.force_max_tokens = batchForceMaxTokens;
+        if (batchThinkingParamStyleEnabled) {
+          overrides.thinking_param_style = batchThinkingParamStyle === 'enable_thinking' || batchThinkingParamStyle === 'none'
+            ? batchThinkingParamStyle
+            : undefined;
+          overrides.reasoning_profile = normalizeReasoningProfile(batchThinkingParamStyle);
+        }
+        updated.param_overrides = overrides;
       }
-      updated.param_overrides = overrides;
       return updated;
     });
     try {
@@ -995,6 +1011,14 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
       message.error(t('error.saveFailed'));
     }
   }, [batchSelected, provider?.models, providerId, saveModels, message, t, batchModelType, batchModelTypeEnabled, batchCapabilities, batchCapabilitiesEnabled, batchContextWindow, batchContextWindowEnabled, batchTemperature, batchTemperatureEnabled, batchTopP, batchTopPEnabled, batchMaxTokensParam, batchMaxTokensParamEnabled, batchFreqPenalty, batchFreqPenaltyEnabled, batchUseMaxCompletionTokens, batchUseMaxCompletionTokensEnabled, batchNoSystemRole, batchNoSystemRoleEnabled, batchForceMaxTokens, batchForceMaxTokensEnabled, batchThinkingParamStyle, batchThinkingParamStyleEnabled]);
+
+  const batchEditIsImageMode = useMemo(() => {
+    if (batchModelTypeEnabled) return batchModelType === 'Image';
+    const selectedModels = (provider?.models ?? []).filter((model) =>
+      batchSelected.has(model.model_id));
+    return selectedModels.length > 0
+      && selectedModels.every((model) => model.model_type === 'Image');
+  }, [batchModelType, batchModelTypeEnabled, batchSelected, provider?.models]);
 
   const groupedModels = useMemo(() => {
     const groups: Record<string, Model[]> = {};
@@ -1920,6 +1944,18 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
               </div>
             </div>
 
+            {editModelType === 'Image' && (
+              <>
+                <Divider className="!my-2" />
+                <ImageProtocolEditor
+                  value={editImageConfig}
+                  providerType={provider?.provider_type ?? 'custom'}
+                  modelId={editingModel.model_id}
+                  onChange={setEditImageConfig}
+                />
+              </>
+            )}
+
             {editModelType === 'Chat' && (
               <>
                 <Divider className="!my-2" />
@@ -1952,12 +1988,14 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
               </>
             )}
 
-            <Divider className="!my-2" />
+            {editModelType !== 'Image' && (
+              <>
+                <Divider className="!my-2" />
 
-            {/* Parameters — horizontal label-control layout */}
-            <div>
-              <div className="font-medium mb-2" style={{ fontSize: 13 }}>{t('settings.modelParams')}</div>
-              <div className="space-y-3">
+                {/* Parameters — horizontal label-control layout */}
+                <div>
+                  <div className="font-medium mb-2" style={{ fontSize: 13 }}>{t('settings.modelParams')}</div>
+                  <div className="space-y-3">
                 {/* Context Window */}
                 <div>
                   <div className="flex items-center justify-between" style={{ padding: '8px 0' }}>
@@ -2062,8 +2100,10 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
                     {editExtraBodyError ? t(editExtraBodyError) : t('settings.extraBodyHint')}
                   </Text>
                 </div>
-              </div>
-            </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           </div>
         )}
@@ -2114,10 +2154,12 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
             </div>
           </div>
 
-          <Divider className="!my-2" />
+          {!batchEditIsImageMode && (
+            <>
+              <Divider className="!my-2" />
 
-          {/* Capabilities */}
-          <div>
+              {/* Capabilities */}
+              <div>
             <div className="flex items-center justify-between mb-1.5">
               <div className="font-medium" style={{ fontSize: 13 }}>{t('settings.modelAbilities')}</div>
               <Switch size="small" checked={batchCapabilitiesEnabled} onChange={setBatchCapabilitiesEnabled} />
@@ -2143,12 +2185,12 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
                 );
               })}
             </div>
-          </div>
+              </div>
 
-          <Divider className="!my-2" />
+              <Divider className="!my-2" />
 
-          {/* Context Window */}
-          <div>
+              {/* Context Window */}
+              <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-medium" style={{ fontSize: 13 }}>{t('settings.contextWindow')}</span>
               <Switch size="small" checked={batchContextWindowEnabled} onChange={setBatchContextWindowEnabled} />
@@ -2175,10 +2217,10 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
                 onChange={setBatchContextWindow}
               />
             </div>
-          </div>
+              </div>
 
-          {/* Parameters */}
-          <div>
+              {/* Parameters */}
+              <div>
             <div className="font-medium mb-2" style={{ fontSize: 13 }}>{t('settings.modelParams')}</div>
             <div>
               <ModelParamSliders
@@ -2252,7 +2294,9 @@ export function ProviderDetail({ providerId }: ProviderDetailProps) {
                 />
               </div>
             </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
         </div>
       </Modal>

@@ -127,6 +127,7 @@ impl BuiltinModel {
             context_window: None,
             enabled: self.enabled,
             param_overrides: self.param_overrides.clone(),
+            image_config: None,
         }
     }
 }

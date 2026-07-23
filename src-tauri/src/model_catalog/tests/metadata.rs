@@ -167,6 +167,7 @@ fn model(model_id: &str, model_type: ModelType, context_window: Option<u32>) -> 
         context_window,
         enabled: true,
         param_overrides: None,
+        image_config: None,
     }
 }
 

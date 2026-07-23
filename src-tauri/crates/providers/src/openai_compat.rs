@@ -1877,6 +1877,7 @@ where
                         context_window: None,
                         enabled: true,
                         param_overrides: None,
+                        image_config: None,
                     }
                 })
                 .collect()
