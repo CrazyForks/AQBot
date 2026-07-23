@@ -85,6 +85,13 @@ windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
 ] }
 
+[profile.dev]
+debug = "line-tables-only"
+incremental = true
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 strip = true
 lto = true
